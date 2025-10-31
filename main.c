@@ -104,39 +104,38 @@ int main(void)
 			{
 				for (uint8_t led = 1; led < 6; led++) // for loop that iterates through LEDs
 				{
-					if (color == RED)
+					switch (color)
 					{
-						led_write(led, 4095, fade_up[i], 0); // fade green up (to yellow)
-					}
-					else if (color == YELLOW)
-					{
-						led_write(led, fade_down[i], 4095, 0); // fade red down (to green)
-					}
-					else if (color == GREEN)
-					{
-						led_write(led, 0, 4095, fade_up[i]); // fade blue up (to cyan)
-					}
-					else if (color == CYAN)
-					{
-						led_write(led, 0, fade_down[i], 4095); // fade green down (to blue)
-					}
-					else if (color == BLUE)
-					{
-						led_write(led, fade_up[i], 0, 4095); // fade red up (to magenta)
-					}
-					else if (color == MAGENTA)
-					{
-						led_write(led, 4095, 0, fade_down[i]); // fade blue down (to red)
+						case RED:
+							led_write(led, 4095, fade_up[i], 0); // fade green up (to yellow)
+							break;
+						
+						case YELLOW:
+							led_write(led, fade_down[i], 4095, 0); // fade red down (to green)
+							break;
+
+						case GREEN:
+							led_write(led, 0, 4095, fade_up[i]); // fade blue up (to cyan)
+							break;
+
+						case CYAN:
+							led_write(led, 0, fade_down[i], 4095); // fade green down (to blue)
+							break;
+
+						case BLUE:
+							led_write(led, fade_up[i], 0, 4095); // fade red up (to magenta)
+							break;
+
+						case MAGENTA:
+							led_write(led, 4095, 0, fade_down[i]); // fade blue down (to red)
+							break;
 					}
 				}
 				old_millis = millis;
 				while ((millis-old_millis) < 17);
 			}
-			color++;
-			if (color > MAGENTA)
-			{
-				color = RED;
-			}
+			color +=1;
+			color %= 6;
 		//}
 		
 		//led_write(q,0,0,0x0fff);
