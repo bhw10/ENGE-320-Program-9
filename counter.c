@@ -6,6 +6,7 @@
 //------------------------------------------------------------------------------
 
 #include "counter.h"
+#include "spi.h"
 #include "sam.h"
 
 //------------------------------------------------------------------------------
@@ -151,6 +152,9 @@ void TC3_Handler(void)
 		PORT->Group[0].OUTCLR.reg = (1 << 14);
 		DelayTicks(75);
 		PORT->Group[0].OUTCLR.reg = (1 << 07);
-		spi_write();
+		if (data_sent)
+		{
+			spi_write();
+		}
 	}
 }

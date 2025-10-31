@@ -13,13 +13,10 @@
 #define MAGENTA (5)
 
 
-uint8_t toggle = 0;
+//uint8_t toggle = 0;
 static volatile uint32_t millis;
 uint8_t data_sent = 1;
 //uint8_t led = 1;
-static uint8_t mode = 0;
-static uint8_t color = RED;
-static uint32_t old_millis = 0;
 
 // LED values
 const uint16_t fade_up[360] = {
@@ -71,6 +68,9 @@ const uint16_t fade_down[360] = {4095, 4095, 4095, 4095, 4072, 4050, 4027, 4004,
 
 int main(void)
 {
+	uint8_t color = RED;
+	uint8_t mode = 0;
+	uint32_t old_millis = 0;
 
 	/* Initialize the SAM system */
 	SystemInit();
@@ -90,7 +90,6 @@ int main(void)
 	// Turn on the timer and the counter
     timer_enable();
 	counter_enable();
-
 	
 	// Configure the Arduino LED
 	REG_PORT_DIR0 |= PORT_PA17;
@@ -102,39 +101,41 @@ int main(void)
 		//{
 			for (uint16_t i = 0; i < 360; i += 6) // for loop that iterates through fade tables
 			{
-				for (uint8_t led = 1; led < 6; led++) // for loop that iterates through LEDs
+				old_millis = millis;
+				if ((millis - old_millis) > 17)
 				{
-					switch (color)
-					{
-						case RED:
-							led_write(led, 4095, fade_up[i], 0); // fade green up (to yellow)
-							break;
-						
-						case YELLOW:
-							led_write(led, fade_down[i], 4095, 0); // fade red down (to green)
-							break;
-
-						case GREEN:
-							led_write(led, 0, 4095, fade_up[i]); // fade blue up (to cyan)
-							break;
-
-						case CYAN:
-							led_write(led, 0, fade_down[i], 4095); // fade green down (to blue)
-							break;
-
-						case BLUE:
-							led_write(led, fade_up[i], 0, 4095); // fade red up (to magenta)
-							break;
-
-						case MAGENTA:
-							led_write(led, 4095, 0, fade_down[i]); // fade blue down (to red)
-							break;
+					for (uint8_t led = 1; led < 6; led++) // for loop that iterates through LEDs
+						{
+							switch (color)
+							{
+								case RED:
+									led_write(led, 4095, fade_up[i], 0); // fade green up (to yellow)
+									break;
+								
+								case YELLOW:
+									led_write(led, fade_down[i], 4095, 0); // fade red down (to green)
+									break;
+				
+								case GREEN:
+									led_write(led, 0, 4095, fade_up[i]); // fade blue up (to cyan)
+									break;
+				
+								case CYAN:
+									led_write(led, 0, fade_down[i], 4095); // fade green down (to blue)
+									break;
+				
+								case BLUE:
+									led_write(led, fade_up[i], 0, 4095); // fade red up (to magenta)
+									break;
+				
+								case MAGENTA:
+									led_write(led, 4095, 0, fade_down[i]); // fade blue down (to red)
+									break;
+							}
+						}
 					}
 				}
-				old_millis = millis;
-				while ((millis-old_millis) < 17);
-			}
-			color +=1;
+			color = color + 1;
 			color %= 6;
 		//}
 		
