@@ -211,9 +211,7 @@ uint8_t spi(uint8_t data)
 //
 //------------------------------------------------------------------------------
 void SERCOM4_Handler()
-{
-	    //uint8_t data;
-	    
+{	    
 	    if (SERCOM4->SPI.INTFLAG.bit.DRE) {
 		    // Ready to transmit next byte
 

@@ -85,7 +85,7 @@ void counter_init()
 	TC3->COUNT8.EVCTRL.bit.TCEI = 1;
 	
 	// Set the Period to be 10 Events - zero-based counting
-	counter_set((2 * 4096 -1));
+	counter_set((2 * 4096 - 1));
 
 	// Enable TC3
 	//counter_enable();
@@ -146,10 +146,7 @@ void TC3_Handler(void)
 		PORT->Group[0].OUTSET.reg = (1 << 07);
 		DelayTicks(75);
 
-		if(1)
-		{
-			PORT->Group[0].OUTSET.reg = (1 << 14);
-		}
+		PORT->Group[0].OUTSET.reg = (1 << 14);
 		DelayTicks(200);
 		PORT->Group[0].OUTCLR.reg = (1 << 14);
 		DelayTicks(75);
