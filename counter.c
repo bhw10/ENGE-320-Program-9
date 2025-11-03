@@ -86,7 +86,7 @@ void counter_init()
 	TC3->COUNT8.EVCTRL.bit.TCEI = 1;
 	
 	// Set the Period to be 10 Events - zero-based counting
-	counter_set((2 * 4096 - 1));
+	counter_set((2 * 4096 -1));
 }
 
 //============================================================================

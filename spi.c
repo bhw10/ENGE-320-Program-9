@@ -15,21 +15,20 @@
 //
 //------------------------------------------------------------------------------
 
-#define SPI_MOSI (PORT_PB10)
-#define SPI_MOSI_GROUP (1)
-#define SPI_MOSI_PIN (PIN_PB10%32)
-#define SPI_MOSI_PMUX (SPI_MOSI_PIN/2)
+#define SPI_MOSI        (PORT_PB10)
+#define SPI_MOSI_GROUP  (1)
+#define SPI_MOSI_PIN    (PIN_PB10 % 32)
+#define SPI_MOSI_PMUX   (SPI_MOSI_PIN / 2)
 
-#define SPI_MISO (PORT_PA12)
-#define SPI_MISO_GROUP (0)
-#define SPI_MISO_PIN (PIN_PA12%32)
-#define SPI_MISO_PMUX (SPI_MISO_PIN/2)
+#define SPI_MISO        (PORT_PA12)
+#define SPI_MISO_GROUP  (0)
+#define SPI_MISO_PIN    (PIN_PA12 % 32)
+#define SPI_MISO_PMUX   (SPI_MISO_PIN / 2)
 
-#define SPI_SCK (PORT_PB11)
-#define SPI_SCK_GROUP (1)
-#define SPI_SCK_PIN (PIN_PB11%32)
-#define SPI_SCK_PMUX (SPI_SCK_PIN/2)
-
+#define SPI_SCK         (PORT_PB11)
+#define SPI_SCK_GROUP   (1)
+#define SPI_SCK_PIN     (PIN_PB11 % 32)
+#define SPI_SCK_PMUX    (SPI_SCK_PIN / 2)
 
 //------------------------------------------------------------------------------
 //     ___      __   ___  __   ___  ___  __
@@ -38,27 +37,14 @@
 //
 //------------------------------------------------------------------------------
 
-//------------------------------------------------------------------------------
-//                __          __        ___  __
-//     \  /  /\  |__) |  /\  |__) |    |__  /__`
-//      \/  /~~\ |  \ | /~~\ |__) |___ |___ .__/
-//
-//------------------------------------------------------------------------------
 extern uint8_t packed_stuff[24];
-static volatile uint8_t i = 1;
+volatile uint8_t i = 1;
 volatile uint8_t busy = 0;
-extern volatile uint8_t data_sent;
+
 //------------------------------------------------------------------------------
 //      __   __   __  ___  __  ___      __   ___  __
 //     |__) |__) /  \  |  /  \  |  \ / |__) |__  /__`
 //     |    |  \ \__/  |  \__/  |   |  |    |___ .__/
-//
-//------------------------------------------------------------------------------
-
-//------------------------------------------------------------------------------
-//      __        __          __
-//     |__) |  | |__) |    | /  `
-//     |    \__/ |__) |___ | \__,
 //
 //------------------------------------------------------------------------------
 
@@ -133,65 +119,54 @@ void spi_init(void)
 	NVIC_EnableIRQ(SERCOM4_IRQn);
 }
 
+//==============================================================================
+//      SPI Lock Control
+//==============================================================================
+uint8_t spi_lock(void)
+{
+	if (busy)
+	{
+		return 0;     // already busy
+	}
+	busy = 1;
+	return 1;         // acquired
+}
+
+void spi_unlock(void)
+{
+	busy = 0;
+}
 
 //==============================================================================
-void spi_write()
+//      SPI Write - Nonblocking, Interrupt-Driven
+//==============================================================================
+void spi_write(void)
 {
 	if (!spi_lock())
 	{
-		return; // spi busy
+		return; // already transmitting
 	}
-	
-	data_sent = 0;
 	i = 1;
-	
-    SERCOM4->SPI.DATA.reg = packed_stuff[0];
-	SERCOM4->SPI.INTENSET.reg = SERCOM_SPI_INTENSET_DRE;
+
+	SERCOM4->SPI.DATA.reg = packed_stuff[0];
+	SERCOM4->SPI.INTENSET.reg = SERCOM_SPI_INTENSET_DRE; // start ISR-driven send
 }
 
-
 //==============================================================================
-uint8_t spi_read()
+//      SPI Read / Exchange (for generic use)
+//==============================================================================
+uint8_t spi_read(void)
 {
-  // Wait for something to show up in the data register
-  while( SERCOM4->SPI.INTFLAG.bit.DRE == 0 || SERCOM4->SPI.INTFLAG.bit.RXC == 0 );
-  // Read it and return it. 
-  return SERCOM4->SPI.DATA.bit.DATA;
+	while (!SERCOM4->SPI.INTFLAG.bit.RXC);
+	return SERCOM4->SPI.DATA.bit.DATA;
 }
 
-//==============================================================================
 uint8_t spi(uint8_t data)
 {
-  // Wait for the data register to be empty
-  while (SERCOM4->SPI.INTFLAG.bit.DRE == 0); 
-  // Send the data
-  SERCOM4->SPI.DATA.bit.DATA = data;
-  // Wait for something to show up in the data register
-  while( SERCOM4->SPI.INTFLAG.bit.DRE == 0 || SERCOM4->SPI.INTFLAG.bit.RXC == 0 );
-  // Read it and return it. 
-  return SERCOM4->SPI.DATA.bit.DATA;
-}
-
-//==============================================================================
-
-uint8_t spi_lock()
-{
-	if (busy) // spi already busy
-	{
-		return 0;
-	}
-	else
-	{
-		busy = 1;
-		return 1; // lock spi
-	}
-}
-
-//==============================================================================
-
-void spi_unlock()
-{
-	busy = 0; // unlock spi
+	while (!SERCOM4->SPI.INTFLAG.bit.DRE);
+	SERCOM4->SPI.DATA.bit.DATA = data;
+	while (!SERCOM4->SPI.INTFLAG.bit.RXC);
+	return SERCOM4->SPI.DATA.bit.DATA;
 }
 
 //------------------------------------------------------------------------------
@@ -210,35 +185,34 @@ void spi_unlock()
 
 //------------------------------------------------------------------------------
 //        __   __  , __
-//     | /__` |__)  /__`   
+//     | /__` |__)  /__`
 //     | .__/ |  \  .__/
 //
 //------------------------------------------------------------------------------
-void SERCOM4_Handler()
-{	    
-	// Data register empty
-	if (SERCOM4->SPI.INTFLAG.bit.DRE) 
+void SERCOM4_Handler(void)
+{
+	// Handle Data Register Empty
+	if (SERCOM4->SPI.INTFLAG.bit.DRE)
 	{
-	    // Ready to transmit next byte
 		if (i < 24)
 		{
 			SERCOM4->SPI.DATA.reg = packed_stuff[i++];
 		}
 		else
 		{
+			// All bytes loaded; stop DRE and wait for TX complete
 			SERCOM4->SPI.INTENCLR.reg = SERCOM_SPI_INTENCLR_DRE;
 			SERCOM4->SPI.INTENSET.reg = SERCOM_SPI_INTENSET_TXC;
 		}
-		SERCOM4->SPI.INTFLAG.reg = SERCOM_SPI_INTFLAG_DRE; // Clear flag
-	   }
-	
-	// Transfer complete
-	if (SERCOM4->SPI.INTFLAG.bit.TXC) 
+		SERCOM4->SPI.INTFLAG.reg = SERCOM_SPI_INTFLAG_DRE; // clear
+	}
+
+	// Handle TX Complete
+	if (SERCOM4->SPI.INTFLAG.bit.TXC)
 	{
 		SERCOM4->SPI.INTFLAG.reg = SERCOM_SPI_INTFLAG_TXC;
 		SERCOM4->SPI.INTENCLR.reg = SERCOM_SPI_INTENCLR_TXC;
 		i = 1;
-		data_sent = 1;
 		spi_unlock();  // release SPI lock
 	}
 }

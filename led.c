@@ -58,6 +58,12 @@ static void pack12to8(uint16_t *input, uint8_t *output, uint16_t count);
 //
 //------------------------------------------------------------------------------
 
+void led_init()
+{
+	// Configure the Arduino LED
+	REG_PORT_DIR0 |= PORT_PA17;
+	REG_PORT_OUTSET0 = PORT_PA17;
+}
 //==============================================================================
 void led_write(uint8_t led, uint16_t red, uint16_t green, uint16_t blue)
 {

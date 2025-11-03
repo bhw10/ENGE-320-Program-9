@@ -28,7 +28,6 @@
 //      \/  /~~\ |  \ | /~~\ |__) |___ |___ .__/
 //
 //------------------------------------------------------------------------------
-
 //------------------------------------------------------------------------------
 //      __   __   __  ___  __  ___      __   ___  __
 //     |__) |__) /  \  |  /  \  |  \ / |__) |__  /__`
@@ -49,28 +48,28 @@ void event_init()
 	// Enable the bus clock for the Event System
 	PM->APBCMASK.bit.EVSYS_ = 1;
 
-    // Configure the General Clock with the 48MHz clk
+	// Configure the General Clock with the 48MHz clk
 	GCLK->CLKCTRL.reg = GCLK_CLKCTRL_ID(GCLK_CLKCTRL_ID_EVSYS_0) |
-	                    GCLK_CLKCTRL_GEN_GCLK0 |
-	                    GCLK_CLKCTRL_CLKEN;
+	GCLK_CLKCTRL_GEN_GCLK0 |
+	GCLK_CLKCTRL_CLKEN;
 	// Wait for the GCLK to be synchronized
 	while(GCLK->STATUS.reg & GCLK_STATUS_SYNCBUSY);
 
-    // Reset the event system
+	// Reset the event system
 	EVSYS->CTRL.bit.SWRST = 1;
 	
 	
 	//TCC0->EVCTRL.bit.MCEO0 = 1;
-    // Use Channel 0 - Note that 1 must be added to the channel in the USER 
-    // Set up the User as TC3 (0x12)
+	// Use Channel 0 - Note that 1 must be added to the channel in the USER
+	// Set up the User as TC3 (0x12)
 	EVSYS->USER.reg = EVSYS_USER_CHANNEL(0+1) | EVSYS_USER_USER(0x12);
 	
 	// Set up the channel generator as TCC0_MCX0 (0x25)
 	// The Async and Sync paths both work, but the SINGLE edges don't seem to
 	EVSYS->CHANNEL.reg = EVSYS_CHANNEL_CHANNEL(0)         |
-	                     EVSYS_CHANNEL_EDGSEL_RISING_EDGE |
-						 EVSYS_CHANNEL_PATH_ASYNCHRONOUS   |
-						 EVSYS_CHANNEL_EVGEN(0x25);
+	EVSYS_CHANNEL_EDGSEL_RISING_EDGE |
+	EVSYS_CHANNEL_PATH_ASYNCHRONOUS   |
+	EVSYS_CHANNEL_EVGEN(0x25);
 	
 }
 
@@ -90,7 +89,13 @@ void event_init()
 
 //------------------------------------------------------------------------------
 //        __   __  , __
-//     | /__` |__)  /__`   
+//     | /__` |__)  /__`
 //     | .__/ |  \  .__/
 //
 //------------------------------------------------------------------------------
+
+void EVSYS_Handler(void) {
+	if (EVSYS->INTFLAG.bit.EVD0) {
+		EVSYS->INTFLAG.reg = EVSYS_INTFLAG_EVD0;
+	}
+}

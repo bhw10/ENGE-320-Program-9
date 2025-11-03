@@ -94,16 +94,18 @@ const uint16_t fade_down[360] = {4095, 4082, 4071, 4059, 4048, 4036, 4025, 4013,
 
 int main(void)
 {
-	uint8_t color = RED;
+	static uint8_t color = RED;
 	uint8_t mode = 0;
-	uint16_t index = 0;
+	static uint16_t index = 0;
+	static uint16_t red, green, blue;
 	uint8_t step = 6;
-	
+
 	// Initialize the SAM system 
 	SystemInit();
 	SysTick_Config(48000); //  Configure the SysTick timer for 1 ms
 
-	// Init the timer and the counter
+	// Init the led, timer, counter, and spi
+	led_init();
 	timer_init();
 	counter_init();
 	spi_init();
@@ -114,47 +116,59 @@ int main(void)
 	// Turn on the timer and the counter
     timer_enable();
 	counter_enable();
-	
-	// Configure the Arduino LED
-	REG_PORT_DIR0 |= PORT_PA17;
-	REG_PORT_OUTSET0 = PORT_PA17;
-	
+
 	while (1)
-	{			
+	{	
 		if (mode == 0)
 		{
 			if (counter_flagGet()) // if flag set
 			{
+				counter_flagSet(0); // clear flag
 				switch (color)
 				{
 					case RED:
-					led_writeAll(4095, fade_up[index], 0); // fade green up (to yellow)
-					break;
+						red = 4095;
+						green = fade_up[index];
+						blue = 0;
+						break;
 					
 					case YELLOW:
-					led_writeAll(fade_down[index], 4095, 0); // fade red down (to green)
-					break;
+						red = fade_down[index];
+						green = 4095;
+						blue = 0;
+						break;
 					
 					case GREEN:
-					led_writeAll(0, 4095, fade_up[index]); // fade blue up (to cyan)
-					break;
+						red = 0;
+						green = 4095;
+						blue = fade_up[index];
+						break;
 					
 					case CYAN:
-					led_writeAll(0, fade_down[index], 4095); // fade green down (to blue)
-					break;
+						red = 0;
+						green = fade_down[index];
+						blue = 4095;
+						break;
 					
 					case BLUE:
-					led_writeAll(fade_up[index], 0, 4095); // fade red up (to magenta)
-					break;
+						red = fade_up[index];
+						green = 0;
+						blue = 4095;
+						break;
 					
 					case MAGENTA:
-					led_writeAll(4095, 0, fade_down[index]); // fade blue down (to red)
-					break;
+						red = 4095;
+						green = 0;
+						blue = fade_down[index];
+						break;
 					
 					default:
-					led_writeAll(0, 0, 0); // all LEDs off
-					break;
+						red = 0;
+						green = 0;
+						blue = 0;
+						break;
 				}
+				led_writeAll(red, green, blue);
 				spi_write(); // send first spi write
 				index += step; // step thru table
 				if (index >= 360) // if table has been stepped through completely
@@ -166,7 +180,6 @@ int main(void)
 						color = RED;
 					}
 				}
-				counter_flagSet(0); // clear flag
 			}
 		}
 		
