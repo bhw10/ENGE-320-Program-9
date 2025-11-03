@@ -97,6 +97,34 @@ void led_write(uint8_t led, uint16_t red, uint16_t green, uint16_t blue)
 	pack12to8(unpacked, packed_stuff, sizeof(packed_stuff));
 }
 
+//==============================================================================
+
+void led_writeAll(uint16_t red, uint16_t green, uint16_t blue)
+{
+	// Assign red LEDs
+	unpacked[15] = red;
+	unpacked[12] = red;
+	unpacked[9] = red;
+	unpacked[6] = red;
+	unpacked[3] = red;
+	
+	// Assign green LEDs
+	unpacked[14] = green;
+	unpacked[11] = green;
+	unpacked[8] = green;
+	unpacked[5] = green;
+	unpacked[2] = green;
+	
+	// Assign blue LEDs
+	unpacked[13] = blue;
+	unpacked[10] = blue;
+	unpacked[7] = blue;
+	unpacked[4] = blue;
+	unpacked[1] = blue;
+	
+	pack12to8(unpacked, packed_stuff, sizeof(packed_stuff));
+}
+
 //------------------------------------------------------------------------------
 //      __   __              ___  ___
 //     |__) |__) | \  /  /\   |  |__

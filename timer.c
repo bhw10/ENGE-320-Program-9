@@ -51,13 +51,12 @@ void timer_init()
 	
 	// Configure the General Clock with the 48MHz clk
 	GCLK->CLKCTRL.reg = GCLK_CLKCTRL_ID(GCLK_CLKCTRL_ID_TCC0_TCC1) |
-	                    GCLK_CLKCTRL_GEN_GCLK0 |
-	                    GCLK_CLKCTRL_CLKEN;
-    // Wait for the GCLK to be synchronized
-    while(GCLK->STATUS.reg & GCLK_STATUS_SYNCBUSY);
+	GCLK_CLKCTRL_GEN_GCLK0 |
+	GCLK_CLKCTRL_CLKEN;
+	// Wait for the GCLK to be synchronized
+	while(GCLK->STATUS.reg & GCLK_STATUS_SYNCBUSY);
 
 	timer_disable();
-		
 	// Enable peripheral function F on  PA15
 	PORT->Group[0].PINCFG[15].bit.PMUXEN = 1;
 	PORT->Group[0].PMUX[15/2].bit.PMUXO = PORT_PMUX_PMUXO_F_Val;
@@ -67,7 +66,9 @@ void timer_init()
 	TCC0->WAVE.bit.WAVEGEN = TCC_WAVE_WAVEGEN_MFRQ_Val; // match frequency mode
 	while (TCC0->SYNCBUSY.bit.WAVE);                    // wait for synchronization
 
-	timer_set_period(100);
+	timer_set_period(1000);
+	
+	//timer_set_period(100);
 
 	// Set the prescaler to 0
 	TCC0->CTRLA.bit.PRESCALER = 0;
@@ -119,7 +120,7 @@ void timer_disable()
 
 //------------------------------------------------------------------------------
 //        __   __  , __
-//     | /__` |__)  /__`   
+//     | /__` |__)  /__`
 //     | .__/ |  \  .__/
 //
 //------------------------------------------------------------------------------

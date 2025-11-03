@@ -47,4 +47,7 @@ void spi_init();
 void spi_write();
 uint8_t spi_read();
 uint8_t spi(uint8_t data);
+uint8_t spi_lock();
+void spi_unlock();
+
 #endif /* SPI_H */

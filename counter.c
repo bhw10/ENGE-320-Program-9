@@ -15,7 +15,7 @@
 //     |__/ |___ |    | | \| |___ .__/
 //
 //------------------------------------------------------------------------------
-#define DelayTicks(ticks)       {volatile uint32_t n=ticks; while(n--);}//takes 8 cycles
+
 //------------------------------------------------------------------------------
 //     ___      __   ___  __   ___  ___  __
 //      |  \ / |__) |__  |  \ |__  |__  /__`
@@ -29,7 +29,7 @@
 //      \/  /~~\ |  \ | /~~\ |__) |___ |___ .__/
 //
 //------------------------------------------------------------------------------
-extern uint8_t data_sent;
+static volatile uint8_t flag = 0;
 //------------------------------------------------------------------------------
 //      __   __   __  ___  __  ___      __   ___  __
 //     |__) |__) /  \  |  /  \  |  \ / |__) |__  /__`
@@ -47,9 +47,9 @@ extern uint8_t data_sent;
 //==============================================================================
 void counter_init()
 {
-  	// Enable the bus clk for the peripheral
-  	PM->APBCMASK.bit.TC3_ = 1;
-  	
+	// Enable the bus clk for the peripheral
+	PM->APBCMASK.bit.TC3_ = 1;
+	
 	// Set the direction on the blank pin
 	PORT->Group[0].DIRSET.reg = (1 << 7);
 	// Set the direction on the latch pin
@@ -60,10 +60,10 @@ void counter_init()
 	GCLK->CLKCTRL.reg = GCLK_CLKCTRL_ID(GCLK_CLKCTRL_ID_TCC2_TC3) |
 	GCLK_CLKCTRL_GEN_GCLK0 |
 	GCLK_CLKCTRL_CLKEN;
-    // Wait for the GCLK to be synchronized
-    while(GCLK->STATUS.reg & GCLK_STATUS_SYNCBUSY);
-  	
-    counter_disable();
+	// Wait for the GCLK to be synchronized
+	while(GCLK->STATUS.reg & GCLK_STATUS_SYNCBUSY);
+	
+	counter_disable();
 	
 	TC3->COUNT16.INTENSET.reg = TC_INTENSET_OVF;  // Enable overflow interrupt
 	NVIC_EnableIRQ(TC3_IRQn);                     // Enable NVIC for TC3
@@ -74,7 +74,7 @@ void counter_init()
 	// Put it in the 8-bit mode.
 	TC3->COUNT8.CTRLA.bit.MODE = TC_CTRLA_MODE_COUNT8_Val;
 
-    // Set up for normal frequency mode (count to period)	
+	// Set up for normal frequency mode (count to period)
 	TC3->COUNT8.CTRLA.bit.WAVEGEN = TC_CTRLA_WAVEGEN_NFRQ_Val;
 	// Could be in MFRQ mode and use the CC reg, but we are in NFRQ mode and using PER
 	//TC3->COUNT8.CTRLA.bit.WAVEGEN = TC_CTRLA_WAVEGEN_MFRQ_Val;
@@ -87,9 +87,6 @@ void counter_init()
 	
 	// Set the Period to be 10 Events - zero-based counting
 	counter_set((2 * 4096 - 1));
-
-	// Enable TC3
-	//counter_enable();
 }
 
 //============================================================================
@@ -115,6 +112,20 @@ void counter_disable()
 {
 	TC3->COUNT8.CTRLA.bit.ENABLE = 0;
 	while (TC3->COUNT8.STATUS.bit.SYNCBUSY);
+}
+
+//============================================================================
+
+uint8_t counter_flagGet()
+{
+	return flag;
+}
+
+//============================================================================
+
+void counter_flagSet(uint8_t value)
+{
+	flag = value;
 }
 
 //------------------------------------------------------------------------------
@@ -145,16 +156,12 @@ void TC3_Handler(void)
 		// Blank PA07
 		// Latch PA14 if data flag set.
 		PORT->Group[0].OUTSET.reg = (1 << 07);
-		DelayTicks(75);
-
+		//DelayTicks(75);
 		PORT->Group[0].OUTSET.reg = (1 << 14);
-		DelayTicks(200);
+		//DelayTicks(200);
 		PORT->Group[0].OUTCLR.reg = (1 << 14);
-		DelayTicks(75);
+		//DelayTicks(75);
 		PORT->Group[0].OUTCLR.reg = (1 << 07);
-		if (data_sent)
-		{
-			spi_write();
-		}
+		counter_flagSet(1);
 	}
 }
