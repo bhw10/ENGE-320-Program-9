@@ -100,7 +100,7 @@ void led_write(uint8_t led, uint16_t red, uint16_t green, uint16_t blue)
 		unpacked[1] = blue;
 		break;
 	}
-	pack12to8(unpacked, packed_stuff, sizeof(packed_stuff));
+	pack12to8(unpacked, packed_stuff, 16);
 }
 
 //==============================================================================
@@ -128,7 +128,7 @@ void led_writeAll(uint16_t red, uint16_t green, uint16_t blue)
 	unpacked[4] = blue;
 	unpacked[1] = blue;
 	
-	pack12to8(unpacked, packed_stuff, sizeof(packed_stuff));
+	pack12to8(unpacked, packed_stuff, 16);
 }
 
 //------------------------------------------------------------------------------
@@ -144,12 +144,9 @@ static void pack12to8(uint16_t *input, uint8_t *output, uint16_t count)
 	uint16_t j = 0;
 	for (uint16_t i = 0; i < count; i += 2)
 	{
-		uint16_t a = input[i] & 0x0FFF;        // 12 bits
-		uint16_t b = input[i + 1] & 0x0FFF;
-
-		output[j++] = a >> 4;                  // high 8 bits of a
-		output[j++] = ((a & 0x000F) << 4) + (b >> 8); // low 4 of a + high 4 of b
-		output[j++] = b & 0x00FF;              // low 8 of b
+		output[j++] = (input[i] >> 4) & 0xFF; // high byte of first element
+		output[j++] = ((input[i] << 4) & 0xF0) |(( input[i+1] >> 8) & 0xFF); // low 4 of first element, high 4 of second element
+		output[j++] = input[i + 1] & 0x00FF;              // low byte of second element
 	}
 }
 

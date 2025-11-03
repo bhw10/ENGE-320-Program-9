@@ -7,6 +7,7 @@
 
 #include "sam.h"
 #include "spi.h"
+#include "counter.h"
 
 //------------------------------------------------------------------------------
 //      __   ___  ___         ___  __
@@ -146,8 +147,8 @@ void spi_write(void)
 	{
 		return; // already transmitting
 	}
-	i = 1;
 
+	i = 1;
 	SERCOM4->SPI.DATA.reg = packed_stuff[0];
 	SERCOM4->SPI.INTENSET.reg = SERCOM_SPI_INTENSET_DRE; // start ISR-driven send
 }
@@ -213,6 +214,6 @@ void SERCOM4_Handler(void)
 		SERCOM4->SPI.INTFLAG.reg = SERCOM_SPI_INTFLAG_TXC;
 		SERCOM4->SPI.INTENCLR.reg = SERCOM_SPI_INTENCLR_TXC;
 		i = 1;
-		spi_unlock();  // release SPI lock
+		counter_spi_completed();
 	}
 }

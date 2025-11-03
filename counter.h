@@ -44,6 +44,7 @@ void counter_disable();
 void counter_set(uint8_t value);
 uint8_t counter_flagGet();
 void counter_flagSet(uint8_t value);
+void counter_spi_completed();
 
 //------------------------------------------------------------------------------
 //      __        __          __

@@ -4,6 +4,7 @@
 #include "event.h"
 #include "spi.h"
 #include "led.h"
+#include "buttons.h"
 
 #define RED (0)
 #define YELLOW (1)
@@ -13,7 +14,6 @@
 #define MAGENTA (5)
 
 static volatile uint32_t millis;
-uint8_t data_sent = 1;
 
 // LED values
 const uint16_t fade_up[360] = {
@@ -54,7 +54,8 @@ const uint16_t fade_up[360] = {
 	3910, 3921, 3933, 3944, 3956, 3967, 3979, 3990, 4002, 4013,
 	4025, 4036, 4048, 4059, 4071, 4082, 4095};
 	
-const uint16_t fade_down[360] = {4095, 4082, 4071, 4059, 4048, 4036, 4025, 4013, 4002, 3990,
+const uint16_t fade_down[360] = {
+	4095, 4082, 4071, 4059, 4048, 4036, 4025, 4013, 4002, 3990,
 	3979, 3967, 3956, 3944, 3933, 3921, 3910, 3898, 3887, 3875,
 	3864, 3852, 3841, 3829, 3818, 3806, 3795, 3783, 3772, 3760,
 	3749, 3737, 3726, 3714, 3703, 3691, 3680, 3668, 3657, 3645,
@@ -91,13 +92,12 @@ const uint16_t fade_down[360] = {4095, 4082, 4071, 4059, 4048, 4036, 4025, 4013,
 	184, 172, 161, 149, 138, 126, 115, 103, 92, 80,
 	69, 57, 46, 34, 23, 11, 0};
 
-
 int main(void)
 {
-	static uint8_t color = RED;
+	uint8_t color = RED;
 	uint8_t mode = 0;
-	static uint16_t index = 0;
-	static uint16_t red, green, blue;
+	uint16_t index = 0;
+	uint16_t red, green, blue;
 	uint8_t step = 6;
 
 	// Initialize the SAM system 
@@ -116,7 +116,8 @@ int main(void)
 	// Turn on the timer and the counter
     timer_enable();
 	counter_enable();
-
+	led_writeAll(0, 0, 0);
+	spi_write();
 	while (1)
 	{	
 		if (mode == 0)
@@ -126,37 +127,37 @@ int main(void)
 				counter_flagSet(0); // clear flag
 				switch (color)
 				{
-					case RED:
+					case RED: // fade to yellow
 						red = 4095;
 						green = fade_up[index];
 						blue = 0;
 						break;
 					
-					case YELLOW:
+					case YELLOW: // fade to green
 						red = fade_down[index];
 						green = 4095;
 						blue = 0;
 						break;
 					
-					case GREEN:
+					case GREEN: // fade to cyan
 						red = 0;
 						green = 4095;
 						blue = fade_up[index];
 						break;
 					
 					case CYAN:
-						red = 0;
+						red = 0; // fade to blue
 						green = fade_down[index];
 						blue = 4095;
 						break;
 					
-					case BLUE:
+					case BLUE: // fade to magenta
 						red = fade_up[index];
 						green = 0;
 						blue = 4095;
 						break;
 					
-					case MAGENTA:
+					case MAGENTA: // fade to red
 						red = 4095;
 						green = 0;
 						blue = fade_down[index];

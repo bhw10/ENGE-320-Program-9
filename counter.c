@@ -8,6 +8,7 @@
 #include "counter.h"
 #include "spi.h"
 #include "sam.h"
+#include <stdbool.h>
 
 //------------------------------------------------------------------------------
 //      __   ___  ___         ___  __
@@ -30,6 +31,7 @@
 //
 //------------------------------------------------------------------------------
 static volatile uint8_t flag = 0;
+static volatile bool spi_write_completed = false;
 //------------------------------------------------------------------------------
 //      __   __   __  ___  __  ___      __   ___  __
 //     |__) |__) /  \  |  /  \  |  \ / |__) |__  /__`
@@ -128,6 +130,12 @@ void counter_flagSet(uint8_t value)
 	flag = value;
 }
 
+//============================================================================
+
+void counter_spi_completed()
+{
+	spi_write_completed = true;
+}
 //------------------------------------------------------------------------------
 //      __   __              ___  ___
 //     |__) |__) | \  /  /\   |  |__
@@ -155,12 +163,17 @@ void TC3_Handler(void)
 		TC3->COUNT16.INTFLAG.reg = TC_INTFLAG_OVF;  // Clear interrupt flag
 		// Blank PA07
 		// Latch PA14 if data flag set.
+		// Blank on
 		PORT->Group[0].OUTSET.reg = (1 << 07);
-		//DelayTicks(75);
-		PORT->Group[0].OUTSET.reg = (1 << 14);
-		//DelayTicks(200);
-		PORT->Group[0].OUTCLR.reg = (1 << 14);
-		//DelayTicks(75);
+		// If write completed, pulse latch
+		if (spi_write_completed)
+			{
+				spi_write_completed = false;
+				PORT->Group[0].OUTTGL.reg = (1 << 14);
+				PORT->Group[0].OUTTGL.reg = (1 << 14);
+				spi_unlock();
+			}
+		// Blank off
 		PORT->Group[0].OUTCLR.reg = (1 << 07);
 		counter_flagSet(1);
 	}
