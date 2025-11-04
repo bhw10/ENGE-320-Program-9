@@ -66,7 +66,7 @@ void timer_init()
 	TCC0->WAVE.bit.WAVEGEN = TCC_WAVE_WAVEGEN_MFRQ_Val; // match frequency mode
 	while (TCC0->SYNCBUSY.bit.WAVE);                    // wait for synchronization
 
-	timer_set_period(98);
+	timer_set_period(5);
 
 	// Set the prescaler to 0
 	TCC0->CTRLA.bit.PRESCALER = 0;
