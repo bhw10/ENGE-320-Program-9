@@ -1,3 +1,34 @@
+// *****************************************************************
+// *
+// * Name Britton Williams;
+// * Program : Program 8;
+// * Class : ENGE 320
+// * Date : 11/ 4/25;
+// * Description : Buttons control modes. Mode 0 causes all LEDs to fade between colors concurrently. Mode 1 causes LEDs to fade individually in a figure-8 pattern.
+// * Joystick controls speed of fade.
+// *
+// * =============================================================
+// * Program Grading Criteria
+// * =============================================================
+// * REQUIRED (40)
+// * Pressing S0 selects mode 0: yes
+// * Mode 0 LED’s fade in correct sequence: yes
+// * Pressing S1 selects mode 1: yes
+// * Mode 1 LED’s fade in correct sequence: yes
+// * OPTIONAL (80)
+// * Without joystick, Mode 0 LED’s fade a full cycle in 1 second: (10) 10
+// * When joystick up, Mode 0 LED’s fade a full cycle in 1/6 of a second: (10) 10
+// * When joystick down, Mode 0 LED’s fade a full cycle in 6 seconds: (10) 10
+// * Mode 0 Joystick up/down varies timing proportionally: (10) 0
+// * Without joystick, Mode 1 LED’s fade a full cycle in 1 second: (10) 10
+// * When joystick up, Mode 1 LED’s fade a full cycle in 1/6 of a second: (10) 10
+// * When joystick down, Mode 1 LED’s fade a full cycle in 6 seconds: (10) 10
+// * Mode 1 joystick up/down varies timing proportionally: (10) 0
+
+// * Total (120) 100
+// * =============================================================
+//*****************************************************************
+
 //------------------------------------------------------------------------------
 //             __             __   ___  __
 //     | |\ | /  ` |    |  | |  \ |__  /__`
@@ -152,7 +183,8 @@ int main(void)
 					mode = 1; // go to mode 1
 					led_writeAll(0, 0, 0); // turn off LEDs
 					spi_write();
-					counter_flagSet(0);
+					counter_flagSet(0); // make sure flag is cleared before next spi write
+					// Initialize state variables
 					index = 0;
 					state = 0;
 					led = 1;
@@ -390,18 +422,15 @@ static uint8_t calculate_adc()
 	{
 		step = 1;
 	}
-	else if (adc_get() > 140) // joystick down
-	{
-		step = ((adc_get() - 128) / 128) * 30;
-	}
-	else if (adc_get() < 116) // joystick up
-	{
-		step = ((128 - adc_get()) / 128) * 5;
-	}
-	else // joystick neutral
+	else if ((adc_get() > 116) && (adc_get() < 140))// joystick neutral
 	{
 		step = 6;
 	}
+	else
+	{
+		step = (adc_get() / 255) * 36;
+	}
+	
 	return step;
 }
 
