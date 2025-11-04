@@ -74,7 +74,7 @@ void counter_init()
 
 	// Set up for normal frequency mode (count to period)
 	TC3->COUNT16.CTRLA.bit.WAVEGEN = TC_CTRLA_WAVEGEN_MFRQ_Val;
-	TC3->COUNT16.CC[0].reg = 1500;
+	TC3->COUNT16.CC[0].reg = 150;
 
 	// Setup count event inputs
 	TC3->COUNT16.EVCTRL.bit.EVACT = TC_EVCTRL_EVACT_COUNT_Val;

@@ -5,8 +5,7 @@
 //
 //------------------------------------------------------------------------------
 
-#include "led.h"
-#include "sam.h"
+#include "adc.h"
 
 //------------------------------------------------------------------------------
 //      __   ___  ___         ___  __
@@ -28,21 +27,6 @@
 //      \/  /~~\ |  \ | /~~\ |__) |___ |___ .__/
 //
 //------------------------------------------------------------------------------
-uint16_t unpacked[16] = {
-
-	0, 0, 0, 0,
-	0, 0, 0, 0,
-	0, 0, 0, 0,
-	0, 0, 0, 0,
-	
-
-};
-uint8_t packed_stuff[24] =
-{
-	0,0,0,0,0,0,0,0,
-	0,0,0,0,0,0,0,0,
-	0,0,0,0,0,0,0,0,
-};
 
 //------------------------------------------------------------------------------
 //      __   __   __  ___  __  ___      __   ___  __
@@ -50,7 +34,7 @@ uint8_t packed_stuff[24] =
 //     |    |  \ \__/  |  \__/  |   |  |    |___ .__/
 //
 //------------------------------------------------------------------------------
-static void pack12to8(uint16_t *input, uint8_t *output, uint16_t count);
+
 //------------------------------------------------------------------------------
 //      __        __          __
 //     |__) |  | |__) |    | /  `
@@ -58,96 +42,69 @@ static void pack12to8(uint16_t *input, uint8_t *output, uint16_t count);
 //
 //------------------------------------------------------------------------------
 
-void led_init()
-{
-	// Configure the Arduino LED
-	REG_PORT_DIR0 |= PORT_PA17;
-	REG_PORT_OUTSET0 = PORT_PA17;
-}
 //==============================================================================
-void led_write(uint8_t led, uint16_t red, uint16_t green, uint16_t blue)
+void adc_init()
 {
-	switch(led)
-	{
-		case 1:
-		unpacked[15] = red;
-		unpacked[14] = green;
-		unpacked[13] = blue;
-		break;
-		
-		case 2:
-		unpacked[12] = red;
-		unpacked[11] = green;
-		unpacked[10] = blue;
-		break;
-		
-		case 3:
-		unpacked[9] = red;
-		unpacked[8] = green;
-		unpacked[7] = blue;
-		break;
-		
-		case 4:
-		unpacked[6] = red;
-		unpacked[5] = green;
-		unpacked[4] = blue;
-		break;
-		
-		case 5:
-		unpacked[3] = red;
-		unpacked[2] = green;
-		unpacked[1] = blue;
-		break;
-	}
-	pack12to8(unpacked, packed_stuff, 16);
+	// enable ADC
+	PM->APBCMASK.bit.ADC_ = 1;
+	
+	// Enable gen clk
+	GCLK->CLKCTRL.reg = GCLK_CLKCTRL_ID_ADC |
+	GCLK_CLKCTRL_GEN_GCLK0 |
+	GCLK_CLKCTRL_CLKEN;
+	while (GCLK->STATUS.bit.SYNCBUSY);
+	
+	// Reset ADC
+	ADC->CTRLA.bit.SWRST = 1;
+	while (ADC->CTRLA.bit.SWRST || ADC->STATUS.bit.SYNCBUSY);
+	
+	// Disable run standby and ADC enable
+	ADC->CTRLA.bit.RUNSTDBY = 0;
+	ADC->CTRLA.bit.ENABLE = 0;
+	
+	// Select reference voltage
+	ADC->REFCTRL.bit.REFSEL = 0x02; // 0.5*VDDANA
+	
+	// Select average ctrl
+	ADC->AVGCTRL.bit.ADJRES = 0;
+	ADC->AVGCTRL.bit.SAMPLENUM = 0;
+	
+	// Select sample ctrl
+	ADC->SAMPCTRL.bit.SAMPLEN = 0;
+	
+	// Set prescaler, resolution, freerun mode, and gain correction
+	ADC->CTRLB.bit.PRESCALER = 0x6; // prescaler of 256
+	ADC->CTRLB.bit.RESSEL = 0x03; // 8-bit resolution
+	ADC->CTRLB.bit.FREERUN = 1;
+	ADC->CTRLB.bit.CORREN = 0;
+	while (ADC->STATUS.bit.SYNCBUSY);
+	
+	// Set gain and mux selection
+	ADC->INPUTCTRL.bit.GAIN = 0xF; // 0.5 * gain
+	ADC->INPUTCTRL.bit.MUXNEG = 0x18; // GND
+	ADC->INPUTCTRL.bit.MUXPOS = 0x02; // Joystick (y-direction)
+	while (ADC->STATUS.bit.SYNCBUSY);
+	
+	// Enable ADC
+	ADC->CTRLA.bit.ENABLE = 1;
+	
+	// Start first conversion
+	ADC->SWTRIG.bit.START = 1;
+	while (ADC->STATUS.bit.SYNCBUSY);
+	
 }
 
-//==============================================================================
-
-void led_writeAll(uint16_t red, uint16_t green, uint16_t blue)
+uint8_t adc_get()
 {
-	// Assign red LEDs
-	unpacked[15] = red;
-	unpacked[12] = red;
-	unpacked[9] = red;
-	unpacked[6] = red;
-	unpacked[3] = red;
-	
-	// Assign green LEDs
-	unpacked[14] = green;
-	unpacked[11] = green;
-	unpacked[8] = green;
-	unpacked[5] = green;
-	unpacked[2] = green;
-	
-	// Assign blue LEDs
-	unpacked[13] = blue;
-	unpacked[10] = blue;
-	unpacked[7] = blue;
-	unpacked[4] = blue;
-	unpacked[1] = blue;
-	
-	pack12to8(unpacked, packed_stuff, 16);
+	while (ADC->STATUS.bit.SYNCBUSY);
+	return ADC->RESULT.bit.RESULT;
 }
-
 //------------------------------------------------------------------------------
 //      __   __              ___  ___
 //     |__) |__) | \  /  /\   |  |__
 //     |    |  \ |  \/  /~~\  |  |___
 //
 //------------------------------------------------------------------------------
-
-static void pack12to8(uint16_t *input, uint8_t *output, uint16_t count)
-{
-	// count = number of 12-bit samples in input[]
-	uint16_t j = 0;
-	for (uint16_t i = 0; i < count; i += 2)
-	{
-		output[j++] = (input[i] >> 4) & 0xFF; // high byte of first element
-		output[j++] = ((input[i] << 4) & 0xF0) | (( input[i+1] >> 8) & 0xFF); // low 4 of first element, high 4 of second element
-		output[j++] = input[i + 1] & 0x00FF;              // low byte of second element
-	}
-}
 
 //------------------------------------------------------------------------------
 //      __                  __        __        __
@@ -158,7 +115,7 @@ static void pack12to8(uint16_t *input, uint8_t *output, uint16_t count)
 
 //------------------------------------------------------------------------------
 //        __   __  , __
-//     | /__` |__)  /__`   
+//     | /__` |__)  /__`
 //     | .__/ |  \  .__/
 //
 //------------------------------------------------------------------------------
