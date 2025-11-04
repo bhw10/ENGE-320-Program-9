@@ -78,6 +78,7 @@ int main(void)
 	uint8_t led = 1;
 	uint8_t state = 0;
 	uint8_t next_led = 2;
+	uint8_t led_state = 0;
 
 	// Initialize the SAM system 
 	SystemInit();
@@ -100,31 +101,35 @@ int main(void)
 	while (1)
 	{	
 		if ((millis - old_millis) > 20) // button debounce
+		{
+			if (buttons_get(0)) // if button 0 pressed
 			{
-				if (buttons_get(0))
-				{
-					old_millis = millis;
-					mode = 0;
-					color = RED;
-				}
-				else if (buttons_get(1))
-				{
-					old_millis = millis;
-					mode = 1;
-					color = BLUE;
-				}
+				old_millis = millis;
+				mode = 0; // go to mode 0
+				color = RED;
 			}
-		if (mode == 0)
+			else if (buttons_get(1))
+			{
+				old_millis = millis;
+				mode = 1; // go to mode 1
+			}
+		}
+
+		while (mode == 0)
 		{
 			if ((millis - old_millis) > 20) // button debounce
 			{
-				if (buttons_get(1))
+				if (buttons_get(1)) // if button 1 pressed
 				{
 					old_millis = millis;
-					mode = 1;
-					led_writeAll(0, 0, 0);
+					mode = 1; // go to mode 1
+					led_writeAll(0, 0, 0); // turn off LEDs
 					spi_write();
-
+					index = 0;
+					state = 0;
+					led = 1;
+					next_led = 2;
+					led_state = 0;
 				}
 			}
 			if (counter_flagGet()) // if flag set
@@ -189,18 +194,18 @@ int main(void)
 			}
 		}
 		
-		else if (mode == 1)
+		while (mode == 1)
 		{
 			if ((millis - old_millis) > 20) // button debounce
 			{
-				if (buttons_get(0))
+				if (buttons_get(0)) // if button 0 pressed
 				{
 					old_millis = millis;
-					mode = 0;
+					mode = 0; // go to mode 0
 					color = RED;
-					led_writeAll(0, 0, 0);
+					led_writeAll(0, 0, 0); // turn off LEDs
 					spi_write();
-
+					index = 0;
 				}
 			}
 			if (counter_flagGet()) // if flag set
@@ -233,13 +238,13 @@ int main(void)
 					break;
 					
 					case 6:
+					led_write(next_led, 0, 0, fade_up[index]); // off to blue for next LED
 					led_write(led, 0, fade_down[index], 4095); // cyan to blue
-					led_write(next_led, 0, 0, fade_up[index]); // off to blue
 					break;
 
 					case 7:
+					led_write(next_led, fade_up[index], 0, 4095); // blue to magenta for next LED
 					led_write(led, 0, 0, fade_down[index]); // blue to off
-					led_write(next_led, fade_up[index], 0, 4095); // blue to magenta
 					break;
 
 					default:
@@ -248,24 +253,54 @@ int main(void)
 					blue = 0;
 					break;
 				}
-				spi_write(); // send first spi write
+				spi_write(); // send spi write
 				index += step; // step thru table
 				if (index >= 360) // if table has been stepped through completely
 				{
 					index = 0; // reset index
 					state += 1; // increment color state
-					if (state > 7) // after magenta, go to red
+					if (state > 7) // at end of state machine
 					{
-						state = 2;
-						led = next_led;
-						next_led++;
+						state = 2; // go to state 2 (first 2 states covered in case 6 and 7 for next led)
+
+						switch (led_state) // to get LEDs in figure-eight pattern
+						{
+							case 0:
+							led = 2;
+							next_led = 5;
+							break;
+
+							case 1:
+							led = 5;
+							next_led = 4;
+							break;
+
+							case 2:
+							led = 4;
+							next_led = 3;
+							break;
+
+							case 3:
+							led = 3;
+							next_led = 5;
+							break;
+
+							case 4:
+							led = 5;
+							next_led = 1;
+							break;
+
+							case 5:
+							led = 1;
+							next_led = 2;
+							break;
+						}
+						led_state++;
+						led_state %= 6;
 					}
 				}
 			}
 		}
-		//led_write(q,0,0,0x0fff);
-		//led_write((q-1), 0, 0, 0);
-		//REG_PORT_OUTTGL0 = PORT_PA17;
 	}
 }
 

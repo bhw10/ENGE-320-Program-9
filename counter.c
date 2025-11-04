@@ -69,16 +69,12 @@ void counter_init()
 	TC3->COUNT16.CTRLA.bit.SWRST = 1; // reset counter
 	while (TC3->COUNT16.CTRLA.bit.SWRST || TC3->COUNT16.STATUS.bit.SYNCBUSY);
 
-	// Enable peripheral function E on PA14 (LED_LAT)
-	//PORT->Group[0].PINCFG[14].bit.PMUXEN = 1;
-	//PORT->Group[0].PMUX[7].bit.PMUXE = PORT_PMUX_PMUXE_E_Val;
-
 	// Put it in the 16-bit mode.
 	TC3->COUNT16.CTRLA.bit.MODE = TC_CTRLA_MODE_COUNT16_Val;
 
 	// Set up for normal frequency mode (count to period)
 	TC3->COUNT16.CTRLA.bit.WAVEGEN = TC_CTRLA_WAVEGEN_MFRQ_Val;
-	TC3->COUNT16.CC[0].bit.CC = 4095;
+	TC3->COUNT16.CC[0].reg = 1500;
 
 	// Setup count event inputs
 	TC3->COUNT16.EVCTRL.bit.EVACT = TC_EVCTRL_EVACT_COUNT_Val;
