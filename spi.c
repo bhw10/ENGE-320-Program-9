@@ -41,6 +41,7 @@
 extern uint8_t packed_stuff[24];
 volatile uint8_t i = 1;
 volatile uint8_t busy = 0;
+volatile bool write_completed = false;
 
 //------------------------------------------------------------------------------
 //      __   __   __  ___  __  ___      __   ___  __
@@ -125,11 +126,14 @@ void spi_init(void)
 //==============================================================================
 uint8_t spi_lock(void)
 {
+	__disable_irq();
 	if (busy)
 	{
+		__enable_irq();
 		return 0;     // already busy
 	}
 	busy = 1;
+	__enable_irq();
 	return 1;         // acquired
 }
 
@@ -147,29 +151,24 @@ void spi_write(void)
 	{
 		return; // already transmitting
 	}
-
 	i = 1;
 	SERCOM4->SPI.DATA.reg = packed_stuff[0];
 	SERCOM4->SPI.INTENSET.reg = SERCOM_SPI_INTENSET_DRE; // start ISR-driven send
 }
 
 //==============================================================================
-//      SPI Read / Exchange (for generic use)
-//==============================================================================
-uint8_t spi_read(void)
+bool spi_write_completed()
 {
-	while (!SERCOM4->SPI.INTFLAG.bit.RXC);
-	return SERCOM4->SPI.DATA.bit.DATA;
+	if (write_completed)
+	{
+		write_completed = false;
+		return true;
+	}
+	else
+	{
+		return false;
+	}
 }
-
-uint8_t spi(uint8_t data)
-{
-	while (!SERCOM4->SPI.INTFLAG.bit.DRE);
-	SERCOM4->SPI.DATA.bit.DATA = data;
-	while (!SERCOM4->SPI.INTFLAG.bit.RXC);
-	return SERCOM4->SPI.DATA.bit.DATA;
-}
-
 //------------------------------------------------------------------------------
 //      __   __              ___  ___
 //     |__) |__) | \  /  /\   |  |__
@@ -214,6 +213,7 @@ void SERCOM4_Handler(void)
 		SERCOM4->SPI.INTFLAG.reg = SERCOM_SPI_INTFLAG_TXC;
 		SERCOM4->SPI.INTENCLR.reg = SERCOM_SPI_INTENCLR_TXC;
 		i = 1;
-		counter_spi_completed();
+		write_completed = true;
+		spi_unlock();
 	}
 }

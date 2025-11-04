@@ -104,13 +104,11 @@ int main(void)
 	SystemInit();
 	SysTick_Config(48000); //  Configure the SysTick timer for 1 ms
 
-	// Init the led, timer, counter, and spi
+	// Initialize drivers
 	led_init();
 	timer_init();
 	counter_init();
 	spi_init();
-	
-	// Set up the events
 	event_init();
 	
 	// Turn on the timer and the counter
@@ -118,6 +116,7 @@ int main(void)
 	counter_enable();
 	led_writeAll(0, 0, 0);
 	spi_write();
+
 	while (1)
 	{	
 		if (mode == 0)

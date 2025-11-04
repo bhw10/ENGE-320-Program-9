@@ -145,7 +145,7 @@ static void pack12to8(uint16_t *input, uint8_t *output, uint16_t count)
 	for (uint16_t i = 0; i < count; i += 2)
 	{
 		output[j++] = (input[i] >> 4) & 0xFF; // high byte of first element
-		output[j++] = ((input[i] << 4) & 0xF0) |(( input[i+1] >> 8) & 0xFF); // low 4 of first element, high 4 of second element
+		output[j++] = ((input[i] << 4) & 0xF0) | (( input[i+1] >> 8) & 0xFF); // low 4 of first element, high 4 of second element
 		output[j++] = input[i + 1] & 0x00FF;              // low byte of second element
 	}
 }
