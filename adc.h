@@ -41,6 +41,8 @@
 
 void adc_init();
 uint16_t adc_get();
+int16_t adc_get_Y();
+int16_t adc_get_X();
 void adc_reset();
 void adc_interruptSet();
 

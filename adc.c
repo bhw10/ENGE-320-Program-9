@@ -111,6 +111,30 @@ uint16_t adc_get()
 
 //==============================================================================
 
+int16_t adc_get_Y()
+{
+	int16_t result;
+	// Atomic block
+	__disable_irq();
+	result = 2048 - y_val;
+	__enable_irq();
+	return result;
+}
+
+//==============================================================================
+
+int16_t adc_get_X()
+{
+	int16_t result;
+	// Atomic block
+	__disable_irq();
+	result = 2048 - x_val;
+	__enable_irq();
+	return result;
+}
+
+//==============================================================================
+
 void adc_reset()
 {
 	ADC->CTRLB.bit.FREERUN = 1; // enable freerun mode

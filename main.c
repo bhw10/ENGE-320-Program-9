@@ -180,7 +180,37 @@ int main(void)
 			if ((millis - old_millis) > 20) // button debounce
 			{
 				old_millis = millis;
-				mode_select();
+				if (buttons_get(0)) // if button 0 pressed
+				{
+					adc_reset();
+					mode = 0; // go to mode 0
+					color = RED;
+					led_writeAll(0, 0, 0); // turn off LEDs
+					spi_write();
+					index = 0;
+				}
+				if (buttons_get(1)) // if button 1 pressed
+				{
+					adc_reset();
+					mode = 1; // go to mode 1
+					led_writeAll(0, 0, 0); // turn off LEDs
+					spi_write();
+					counter_flagSet(0); // make sure flag is cleared before next spi write
+					// Initialize state variables
+					index = 0;
+					state = 0;
+					led = 1;
+					next_led = 2;
+					led_state = 0;
+				}
+				if (buttons_get(2))
+				{
+					adc_interruptSet();
+					mode = 2;
+					led_writeAll(0, 0, 0);
+					spi_write();
+					counter_flagSet(0);
+				}
 			}
 			if (counter_flagGet()) // if flag set
 			{
@@ -250,7 +280,37 @@ int main(void)
 			if ((millis - old_millis) > 20)
 			{
 				old_millis = millis;
-				mode_select();
+				if (buttons_get(0)) // if button 0 pressed
+				{
+					adc_reset();
+					mode = 0; // go to mode 0
+					color = RED;
+					led_writeAll(0, 0, 0); // turn off LEDs
+					spi_write();
+					index = 0;
+				}
+				if (buttons_get(1)) // if button 1 pressed
+				{
+					adc_reset();
+					mode = 1; // go to mode 1
+					led_writeAll(0, 0, 0); // turn off LEDs
+					spi_write();
+					counter_flagSet(0); // make sure flag is cleared before next spi write
+					// Initialize state variables
+					index = 0;
+					state = 0;
+					led = 1;
+					next_led = 2;
+					led_state = 0;
+				}
+				if (buttons_get(2))
+				{
+					adc_interruptSet();
+					mode = 2;
+					led_writeAll(0, 0, 0);
+					spi_write();
+					counter_flagSet(0);
+				}
 			}
 			if (counter_flagGet()) // if flag set
 			{
@@ -384,6 +444,38 @@ int main(void)
 				}
 			}
 		}
+		while (mode == 2)
+		{
+			if (counter_flagGet())
+			{
+				counter_flagSet(0);
+				if (adc_get_X() < -50)
+				{
+					led_write(4, 4095, 4095, 4095);
+					spi_write();
+				}
+				if (adc_get_X() > 50)
+				{
+					led_write(2, 4095, 4095, 4095);
+					spi_write();
+				}
+				if (adc_get_Y() < -50)
+				{
+					led_write(3, 4095, 4095, 4095);
+					spi_write();
+				}
+				if (adc_get_Y() > 50)
+				{
+					led_write(1, 4095, 4095, 4095);
+					spi_write();
+				}
+				if ((adc_get_Y() >= -50) && (adc_get_Y() <= 50) && (adc_get_X() >= -50) && (adc_get_X() <= 50))
+				{
+					led_write(5, 4095, 4095, 4095);
+					spi_write();
+				}
+			}
+		}
 	}
 }
 
@@ -397,15 +489,15 @@ int main(void)
 static uint8_t calculate_adc()
 {
 	uint8_t step;
-	if (adc_get() < 20) // joystick at max up
+	if (adc_get() < 100) // joystick at max up
 	{
 		step = 36;
 	}
-	else if (adc_get() > 4075) // joystick at max down
+	else if (adc_get() > 3095) // joystick at max down
 	{
 		step = 1;
 	}
-	else if ((adc_get() > 2000) && (adc_get() < 2100))// joystick neutral
+	else if ((adc_get() > 1950) && (adc_get() < 2150))// joystick neutral
 	{
 		step = 6;
 	}
