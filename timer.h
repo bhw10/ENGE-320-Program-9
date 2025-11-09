@@ -38,6 +38,7 @@
 
 void timer_init();
 void timer_set_period(uint32_t period);
+void timer_set_ccb(uint16_t val);
 void timer_enable();
 void timer_disable();
 

@@ -14,6 +14,9 @@
 //
 //------------------------------------------------------------------------------
 
+#define Y (0)
+#define X (1)
+
 //------------------------------------------------------------------------------
 //     ___      __   ___  __   ___  ___  __
 //      |  \ / |__) |__  |  \ |__  |__  /__`
@@ -27,7 +30,9 @@
 //      \/  /~~\ |  \ | /~~\ |__) |___ |___ .__/
 //
 //------------------------------------------------------------------------------
-
+static volatile uint8_t dir = Y;
+static volatile uint16_t y_val = 0;
+static volatile uint16_t x_val = 0;
 //------------------------------------------------------------------------------
 //      __   __   __  ___  __  ___      __   ___  __
 //     |__) |__) /  \  |  /  \  |  \ / |__) |__  /__`
@@ -74,7 +79,7 @@ void adc_init()
 	
 	// Set prescaler, resolution, freerun mode, and gain correction
 	ADC->CTRLB.bit.PRESCALER = 0x6; // prescaler of 256
-	ADC->CTRLB.bit.RESSEL = 0x03; // 8-bit resolution
+	ADC->CTRLB.bit.RESSEL = 0x00; // 12-bit resolution
 	ADC->CTRLB.bit.FREERUN = 1;
 	ADC->CTRLB.bit.CORREN = 0;
 	while (ADC->STATUS.bit.SYNCBUSY);
@@ -85,6 +90,9 @@ void adc_init()
 	ADC->INPUTCTRL.bit.MUXPOS = 0x02; // Joystick (y-direction)
 	while (ADC->STATUS.bit.SYNCBUSY);
 	
+	// Enable interrupts
+	NVIC_EnableIRQ(ADC_IRQn);
+	
 	// Enable ADC
 	ADC->CTRLA.bit.ENABLE = 1;
 	
@@ -94,10 +102,30 @@ void adc_init()
 	
 }
 
-uint8_t adc_get()
+//==============================================================================
+uint16_t adc_get()
 {
 	while (ADC->STATUS.bit.SYNCBUSY);
 	return ADC->RESULT.bit.RESULT;
+}
+
+//==============================================================================
+
+void adc_reset()
+{
+	ADC->CTRLB.bit.FREERUN = 1; // enable freerun mode
+	ADC->INTENCLR.bit.RESRDY = 1; // disable interrupt
+	ADC->INPUTCTRL.bit.MUXPOS = 0x02; // select joystick y dir
+}
+
+//==============================================================================
+
+void adc_interruptSet()
+{
+	ADC->CTRLB.bit.FREERUN = 0; // disable freerun mode
+	ADC->INTENSET.bit.RESRDY = 1; // enable interrupts
+	dir = Y;
+	ADC->INPUTCTRL.bit.MUXPOS = 0x02; // select joystick y dir
 }
 //------------------------------------------------------------------------------
 //      __   __              ___  ___
@@ -119,3 +147,23 @@ uint8_t adc_get()
 //     | .__/ |  \  .__/
 //
 //------------------------------------------------------------------------------
+void ADC_Handler(void)
+{
+	if (ADC->INTFLAG.bit.RESRDY)
+	{
+		ADC->INTFLAG.reg = ADC_INTFLAG_RESRDY; // clear flag
+		if (dir == Y)
+		{
+			y_val = ADC->RESULT.reg; // store result
+			ADC->INPUTCTRL.bit.MUXPOS = 0x00; // Set ADC to read x dir
+			dir = X; // switch state
+		}
+		else if (dir == X)
+		{
+			x_val = ADC->RESULT.reg; // store result
+			ADC->INPUTCTRL.bit.MUXPOS = 0x02; // Set ADC to read y dir
+			dir = Y; // switch state
+		}
+		ADC->SWTRIG.bit.START = 1; // Start next conversion
+	}
+}

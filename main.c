@@ -74,6 +74,13 @@
 //------------------------------------------------------------------------------
 
 static volatile uint32_t millis;
+static uint8_t color = RED;
+static uint8_t mode = 0;
+static uint16_t index = 0;
+static uint8_t led = 1;
+static uint8_t state = 0;
+static uint8_t next_led = 2;
+static uint8_t led_state = 0;
 
 // LED values
 const uint16_t fade_up[360] = {
@@ -131,6 +138,7 @@ const uint16_t fade_down[360] = {
 //------------------------------------------------------------------------------
 
 static uint8_t calculate_adc();
+static void mode_select();
 
 //------------------------------------------------------------------------------
 //      __        __          __
@@ -141,16 +149,9 @@ static uint8_t calculate_adc();
 
 int main(void)
 {
-	uint8_t color = RED;
-	uint8_t mode = 0;
-	uint16_t index = 0;
 	uint16_t red, green, blue, next_red, next_green, next_blue;
 	uint8_t step;
 	uint32_t old_millis = 0;
-	uint8_t led = 1;
-	uint8_t state = 0;
-	uint8_t next_led = 2;
-	uint8_t led_state = 0;
 
 	// Initialize the SAM system
 	SystemInit();
@@ -168,6 +169,7 @@ int main(void)
 	// Turn on the timer and the counter
 	timer_enable();
 	counter_enable();
+	adc_reset();
 	led_writeAll(0, 0, 0);
 	spi_write();
 
@@ -177,20 +179,8 @@ int main(void)
 		{
 			if ((millis - old_millis) > 20) // button debounce
 			{
-				if (buttons_get(1)) // if button 1 pressed
-				{
-					old_millis = millis;
-					mode = 1; // go to mode 1
-					led_writeAll(0, 0, 0); // turn off LEDs
-					spi_write();
-					counter_flagSet(0); // make sure flag is cleared before next spi write
-					// Initialize state variables
-					index = 0;
-					state = 0;
-					led = 1;
-					next_led = 2;
-					led_state = 0;
-				}
+				old_millis = millis;
+				mode_select();
 			}
 			if (counter_flagGet()) // if flag set
 			{
@@ -257,17 +247,10 @@ int main(void)
 		
 		while (mode == 1)
 		{
-			if ((millis - old_millis) > 20) // button debounce
+			if ((millis - old_millis) > 20)
 			{
-				if (buttons_get(0)) // if button 0 pressed
-				{
-					old_millis = millis;
-					mode = 0; // go to mode 0
-					color = RED;
-					led_writeAll(0, 0, 0); // turn off LEDs
-					spi_write();
-					index = 0;
-				}
+				old_millis = millis;
+				mode_select();
 			}
 			if (counter_flagGet()) // if flag set
 			{
@@ -414,26 +397,61 @@ int main(void)
 static uint8_t calculate_adc()
 {
 	uint8_t step;
-	if (adc_get() < 10) // joystick at max up
+	if (adc_get() < 20) // joystick at max up
 	{
 		step = 36;
 	}
-	else if (adc_get() > 245) // joystick at max down
+	else if (adc_get() > 4075) // joystick at max down
 	{
 		step = 1;
 	}
-	else if ((adc_get() > 116) && (adc_get() < 140))// joystick neutral
+	else if ((adc_get() > 2000) && (adc_get() < 2100))// joystick neutral
 	{
 		step = 6;
 	}
 	else
 	{
-		step = (adc_get() / 255) * 36;
+		step = (adc_get() / 4095) * 36;
 	}
 	
 	return step;
 }
 
+
+static void mode_select()
+{
+	if (buttons_get(0)) // if button 0 pressed
+	{
+		adc_reset();
+		mode = 0; // go to mode 0
+		color = RED;
+		led_writeAll(0, 0, 0); // turn off LEDs
+		spi_write();
+		index = 0;
+	}
+	if (buttons_get(1)) // if button 1 pressed
+	{
+		adc_reset();
+		mode = 1; // go to mode 1
+		led_writeAll(0, 0, 0); // turn off LEDs
+		spi_write();
+		counter_flagSet(0); // make sure flag is cleared before next spi write
+		// Initialize state variables
+		index = 0;
+		state = 0;
+		led = 1;
+		next_led = 2;
+		led_state = 0;
+	}
+	if (buttons_get(2))
+	{
+		adc_interruptSet();
+		mode = 2;
+		led_writeAll(0, 0, 0);
+		spi_write();
+		counter_flagSet(0);
+		}
+}
 //-----------------------------------------------------------------------------
 //        __   __   __
 //     | /__` |__) /__`

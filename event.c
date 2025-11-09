@@ -46,22 +46,25 @@
 //==============================================================================
 void event_init()
 {
-	// enable bus clock
+	// Enable the bus clock for the Event System
 	PM->APBCMASK.bit.EVSYS_ = 1;
 
-	// GCLK with 48MHz clk... again, just in case
+	// Configure the General Clock with the 48MHz clk
 	GCLK->CLKCTRL.reg = GCLK_CLKCTRL_ID(GCLK_CLKCTRL_ID_EVSYS_0) |
 	GCLK_CLKCTRL_GEN_GCLK0 |
 	GCLK_CLKCTRL_CLKEN;
+	// Wait for the GCLK to be synchronized
 	while(GCLK->STATUS.reg & GCLK_STATUS_SYNCBUSY);
 
-	// reset
+	// Reset the event system
 	EVSYS->CTRL.bit.SWRST = 1;
 	
-	// user as TC3 (0x12)
+	// Use Channel 0 - Note that 1 must be added to the channel in the USER
+	// Set up the User as TC3 (0x12)
 	EVSYS->USER.reg = EVSYS_USER_CHANNEL(0+1) | EVSYS_USER_USER(0x12);
 	
-	// channel generator as TCC0_MCX0 (0x25)
+	// Set up the channel generator as TCC0_MCX0 (0x25)
+	// The Async and Sync paths both work, but the SINGLE edges don't seem to
 	EVSYS->CHANNEL.reg = EVSYS_CHANNEL_CHANNEL(0)         |
 	EVSYS_CHANNEL_EDGSEL_RISING_EDGE |
 	EVSYS_CHANNEL_PATH_ASYNCHRONOUS   |
