@@ -44,6 +44,10 @@
 #include "led.h"
 #include "buttons.h"
 #include "adc.h"
+#include "i2c.h"
+#include "accelerometer.h"
+#include "delay.h"
+#include "bmi160.h"
 #include <math.h>
 
 //------------------------------------------------------------------------------
@@ -77,7 +81,7 @@
 static volatile uint32_t millis;
 static uint8_t color = RED;
 static uint8_t mode = 0;
-static uint16_t index = 0;
+static uint16_t index_ = 0;
 static uint8_t led = 1;
 static uint8_t state = 0;
 static uint8_t next_led = 2;
@@ -206,6 +210,8 @@ int main(void)
 	uint16_t red, green, blue, next_red, next_green, next_blue, x_red, y_red, x_green, y_green, x_blue, y_blue, middle_red, middle_green, middle_blue;
 	uint8_t step;
 	uint32_t old_millis = 0;
+	uint32_t accel_millis = 0;
+	int16_t accel_x, accel_y;
 
 	// Initialize the SAM system
 	SystemInit();
@@ -219,6 +225,8 @@ int main(void)
 	event_init();
 	buttons_init();
 	adc_init();
+	i2c_init();
+	accelerometer_init();
 	
 	// Turn on the timer and the counter
 	timer_enable();
@@ -229,6 +237,8 @@ int main(void)
 
 	while (1)
 	{
+		
+		// Mode 0
 		while (mode == 0)
 		{
 			if ((millis - old_millis) > 20) // button debounce
@@ -242,7 +252,7 @@ int main(void)
 					spi_write();
 					counter_flagSet(0); // make sure flag is cleared before next spi write
 					// Initialize state variables
-					index = 0;
+					index_ = 0;
 					state = 0;
 					led = 1;
 					next_led = 2;
@@ -257,6 +267,15 @@ int main(void)
 					spi_write();
 					counter_flagSet(0);
 				}
+				if (buttons_get(3))
+				{
+					old_millis = millis;
+					adc_reset();
+					mode = 3;
+					led_writeAll(0,0,0);
+					spi_write();
+					counter_flagSet(0);
+				}
 			}
 			if (counter_flagGet()) // if flag set
 			{
@@ -266,12 +285,12 @@ int main(void)
 				{
 					case RED: // fade to yellow
 					red = 4095;
-					green = fade_up[index];
+					green = fade_up[index_];
 					blue = 0;
 					break;
 					
 					case YELLOW: // fade to green
-					red = fade_down[index];
+					red = fade_down[index_];
 					green = 4095;
 					blue = 0;
 					break;
@@ -279,17 +298,17 @@ int main(void)
 					case GREEN: // fade to cyan
 					red = 0;
 					green = 4095;
-					blue = fade_up[index];
+					blue = fade_up[index_];
 					break;
 					
 					case CYAN:
 					red = 0; // fade to blue
-					green = fade_down[index];
+					green = fade_down[index_];
 					blue = 4095;
 					break;
 					
 					case BLUE: // fade to magenta
-					red = fade_up[index];
+					red = fade_up[index_];
 					green = 0;
 					blue = 4095;
 					break;
@@ -297,7 +316,7 @@ int main(void)
 					case MAGENTA: // fade to red
 					red = 4095;
 					green = 0;
-					blue = fade_down[index];
+					blue = fade_down[index_];
 					break;
 					
 					default:
@@ -308,10 +327,10 @@ int main(void)
 				}
 				led_writeAll(red, green, blue);
 				spi_write(); // send first spi write
-				index += step; // step thru table
-				if (index >= 360) // if table has been stepped through completely
+				index_ += step; // step thru table
+				if (index_ >= 360) // if table has been stepped through completely
 				{
-					index = 0; // reset index
+					index_ = 0; // reset index
 					color += 1; // increment color state
 					if (color > 5) // after magenta, go to red
 					{
@@ -321,6 +340,7 @@ int main(void)
 			}
 		}
 		
+		// Mode 1
 		while (mode == 1)
 		{
 			if ((millis - old_millis) > 20)
@@ -333,7 +353,7 @@ int main(void)
 					color = RED;
 					led_writeAll(0, 0, 0); // turn off LEDs
 					spi_write();
-					index = 0;
+					index_ = 0;
 				}
 				if (buttons_get(2))
 				{
@@ -341,6 +361,15 @@ int main(void)
 					adc_interruptSet();
 					mode = 2;
 					led_writeAll(0, 0, 0);
+					spi_write();
+					counter_flagSet(0);
+				}
+				if (buttons_get(3))
+				{
+					old_millis = millis;
+					adc_reset();
+					mode = 3;
+					led_writeAll(0,0,0);
 					spi_write();
 					counter_flagSet(0);
 				}
@@ -354,14 +383,14 @@ int main(void)
 					case 0: // off to blue
 					red = 0;
 					green = 0;
-					blue = fade_up[index];
+					blue = fade_up[index_];
 					next_red = 0;
 					next_green = 0;
 					next_blue = 0;
 					break;
 					
 					case 1: // blue to magenta
-					red = fade_up[index];
+					red = fade_up[index_];
 					green = 0;
 					blue = 4095;
 					next_red = 0;
@@ -372,7 +401,7 @@ int main(void)
 					case 2: // magenta to red
 					red = 4095;
 					green = 0;
-					blue = fade_down[index];
+					blue = fade_down[index_];
 					next_red = 0;
 					next_green = 0;
 					next_blue = 0;
@@ -380,7 +409,7 @@ int main(void)
 					
 					case 3: // red to yellow
 					red = 4095;
-					green = fade_up[index];
+					green = fade_up[index_];
 					blue = 0;
 					next_red = 0;
 					next_green = 0;
@@ -388,7 +417,7 @@ int main(void)
 					break;
 					
 					case 4: // yellow to green
-					red = fade_down[index];
+					red = fade_down[index_];
 					green = 4095;
 					blue = 0;
 					next_red = 0;
@@ -399,7 +428,7 @@ int main(void)
 					case 5: // green to cyan
 					red = 0;
 					green = 4095;
-					blue = fade_up[index];
+					blue = fade_up[index_];
 					next_red = 0;
 					next_green = 0;
 					next_blue = 0;
@@ -407,22 +436,22 @@ int main(void)
 					
 					case 6:
 					red = 0;
-					green = fade_down[index];
+					green = fade_down[index_];
 					blue = 4095;
 					next_red = 0;
 					next_green = 0;
-					next_blue = fade_up[index];
+					next_blue = fade_up[index_];
 					break;
 
 					case 7:
 					red = 0;
 					green = 0;
-					blue = fade_down[index];
+					blue = fade_down[index_];
 					if (blue == 1) // normalize blue at high step size
 					{
 						blue = 0;
 					}
-					next_red = fade_up[index];
+					next_red = fade_up[index_];
 					next_green = 0;
 					next_blue = 4095;
 					break;
@@ -430,10 +459,10 @@ int main(void)
 				led_write(led, red, green, blue);
 				led_write(next_led, next_red, next_green, next_blue);
 				spi_write(); // send spi write
-				index += step; // step thru table
-				if (index >= 360) // if table has been stepped through completely
+				index_ += step; // step thru table
+				if (index_ >= 360) // if table has been stepped through completely
 				{
-					index = 0; // reset index
+					index_ = 0; // reset index
 					state += 1; // increment color state
 					if (state > 7) // at end of state machine
 					{
@@ -477,6 +506,8 @@ int main(void)
 				}
 			}
 		}
+		
+		// Mode 2
 		while (mode == 2)
 		{
 			if ((millis - old_millis) > 20) // button debounce
@@ -489,7 +520,7 @@ int main(void)
 					color = RED;
 					led_writeAll(0, 0, 0); // turn off LEDs
 					spi_write();
-					index = 0;
+					index_ = 0;
 				}
 				if (buttons_get(1)) // if button 1 pressed
 				{
@@ -500,11 +531,20 @@ int main(void)
 					spi_write();
 					counter_flagSet(0); // make sure flag is cleared before next spi write
 					// Initialize state variables
-					index = 0;
+					index_ = 0;
 					state = 0;
 					led = 1;
 					next_led = 2;
 					led_state = 0;
+				}
+				if (buttons_get(3))
+				{
+					old_millis = millis;
+					adc_reset();
+					mode = 3;
+					led_writeAll(0,0,0);
+					spi_write();
+					counter_flagSet(0);
 				}
 			}
 			if (counter_flagGet())
@@ -632,6 +672,180 @@ int main(void)
 				spi_write();
 			}
 		}
+		
+		// Mode 3
+		while (mode == 3)
+		{
+			if ((millis - old_millis) > 20) // button debounce
+			{
+				if (buttons_get(0)) // if button 0 pressed
+				{
+					old_millis = millis;
+					adc_reset();
+					mode = 0; // go to mode 0
+					color = RED;
+					led_writeAll(0, 0, 0); // turn off LEDs
+					spi_write();
+					index_ = 0;
+				}
+				if (buttons_get(1)) // if button 1 pressed
+				{
+					old_millis = millis;
+					adc_reset();
+					mode = 1; // go to mode 1
+					led_writeAll(0, 0, 0); // turn off LEDs
+					spi_write();
+					counter_flagSet(0); // make sure flag is cleared before next spi write
+					// Initialize state variables
+					index_ = 0;
+					state = 0;
+					led = 1;
+					next_led = 2;
+					led_state = 0;
+				}
+				if (buttons_get(2))
+				{
+					old_millis = millis;
+					adc_interruptSet();
+					mode = 2;
+					led_writeAll(0, 0, 0);
+					spi_write();
+					counter_flagSet(0);
+				}
+			}
+			if (counter_flagGet())
+			{
+				counter_flagSet(0); // clear flag
+				led_writeAll(0, 0, 0); // turn off all LEDs
+				
+				if ((millis - accel_millis) > 2)
+				{
+					accelerometer_get();
+					// normalize accel values to be within -2048 and 2048
+					accel_x = ((float) accelerometer_get_x() / 16400) * 2048;
+					accel_y = ((float) accelerometer_get_y() / 16300) * 2048;
+					accel_millis = millis;
+				}
+				// Configure left and right LEDs
+				if (abs(accel_x) < 410) // off to blue
+				{
+					x_blue = xy_fade_up[abs(accel_x)]; // fade blue up
+					x_red = 0;
+					x_green = 0;
+				}
+				else if (abs(accel_x) < 820) // blue to red
+				{
+					x_red = xy_fade_up[abs(accel_x) - 410]; // fade red up
+					x_blue = xy_fade_down[abs(accel_x) - 410]; // fade blue down
+					x_green = 0;
+				}
+				else if (abs(accel_x) < 1230) // red to green
+				{
+					x_green = xy_fade_up[abs(accel_x) - 820]; // fade green up
+					x_red = xy_fade_down[abs(accel_x) - 820]; // fade red down
+					x_blue = 0;
+				}
+				else if (abs(accel_x) < 1640) // green to cyan
+				{
+					x_green = xy_fade_up[abs(accel_x) - 1230]; // fade green up
+					x_blue = xy_fade_up[abs(accel_x) - 1230]; // fade blue up
+					x_red = 0;
+				}
+				else // cyan to white
+				{
+					x_green = 4095; // max green
+					x_blue = 4095; // max blue
+					x_red = xy_fade_up[abs(accel_x) - 1640]; // fade red up
+				}
+				
+				// Configure top and bottom LEDs
+				if (abs(accel_y) < 410) // off to blue
+				{
+					y_blue = xy_fade_up[abs(accel_y)]; // fade blue up
+					y_green = 0;
+					y_red = 0;
+				}
+				else if (abs(accel_y) < 820) // blue to red
+				{
+					y_red = xy_fade_up[abs(accel_y) - 410]; // fade red up
+					y_blue = xy_fade_down[abs(accel_y) - 410]; // fade blue down
+					y_green = 0;
+				}
+				else if (abs(accel_y) < 1230) // red to green
+				{
+					y_green = xy_fade_up[abs(accel_y) - 820]; // fade green up
+					y_red = xy_fade_down[abs(accel_y) - 820]; // fade red down
+					y_blue = 0;
+				}
+				else if (abs(accel_y) < 1640) // green to cyan
+				{
+					y_green = xy_fade_up[abs(accel_y) - 1230]; // fade green up
+					y_blue = xy_fade_up[abs(accel_y) - 1230]; // fade blue up
+					y_red = 0;
+				}
+				else // cyan to white
+				{
+					y_green = 4095; // max green
+					y_blue = 4095; // max blue
+					y_red = xy_fade_up[abs(accel_y) - 1640]; // fade red up
+				}
+				
+				// Configure middle LED
+				// if X > Y
+				// high_val = X
+				// else high_val = Y
+				uint16_t high_val = (abs(accel_x) > abs(accel_y))? abs(accel_x) : abs(accel_y); // get higher value between x and y
+				if (high_val <= 410) // white to cyan
+				{
+					middle_green = 4095; // max green
+					middle_blue = 4095; // max blue
+					middle_red = xy_fade_up[410 - high_val]; // fade red up
+				}
+				else if (high_val <= 820) // cyan to green
+				{
+					middle_green = xy_fade_up[820 - high_val]; // fade green up
+					middle_blue = xy_fade_up[820 - high_val]; // fade blue up
+					middle_red = 0;
+				}
+				else if (high_val <= 1230) // green to red
+				{
+					middle_green = xy_fade_up[1230 - high_val]; // fade green up
+					middle_red = xy_fade_down[1230 - high_val]; // fade red down
+					middle_blue = 0;
+				}
+				else if (high_val <= 1640) // red to blue
+				{
+					middle_red = xy_fade_up[1640 - high_val];
+					middle_blue = xy_fade_down[1640 - high_val];
+					middle_green = 0;
+				}
+				else // blue to off
+				{
+					middle_blue = xy_fade_up[2047 - high_val];
+					middle_red = 0;
+					middle_green = 0;
+				}
+				// Write to correct LEDs
+				if (accel_y > 0)
+				{
+					led_write(4, y_red, y_green, y_blue);
+				}
+				else if (accel_y < 0)
+				{
+					led_write(2, y_red, y_green, y_blue);
+				}
+				if (accel_x < 0)
+				{
+					led_write(1, x_red, x_green, x_blue);
+				}
+				else if (accel_x > 0)
+				{
+					led_write(3, x_red, x_green, x_blue);
+				}
+				led_write(5, middle_red, middle_green, middle_blue);
+				spi_write();
+			}
+		}
 	}
 }
 
@@ -675,7 +889,7 @@ static void mode_select()
 		color = RED;
 		led_writeAll(0, 0, 0); // turn off LEDs
 		spi_write();
-		index = 0;
+		index_ = 0;
 	}
 	if (buttons_get(1)) // if button 1 pressed
 	{
@@ -685,7 +899,7 @@ static void mode_select()
 		spi_write();
 		counter_flagSet(0); // make sure flag is cleared before next spi write
 		// Initialize state variables
-		index = 0;
+		index_ = 0;
 		state = 0;
 		led = 1;
 		next_led = 2;

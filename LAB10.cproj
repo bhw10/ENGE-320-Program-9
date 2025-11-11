@@ -161,10 +161,25 @@
     </ToolchainSettings>
   </PropertyGroup>
   <ItemGroup>
+    <Compile Include="accelerometer.c">
+      <SubType>compile</SubType>
+    </Compile>
+    <Compile Include="accelerometer.h">
+      <SubType>compile</SubType>
+    </Compile>
     <Compile Include="adc.c">
       <SubType>compile</SubType>
     </Compile>
     <Compile Include="adc.h">
+      <SubType>compile</SubType>
+    </Compile>
+    <Compile Include="bmi160.c">
+      <SubType>compile</SubType>
+    </Compile>
+    <Compile Include="bmi160.h">
+      <SubType>compile</SubType>
+    </Compile>
+    <Compile Include="bmi160_defs.h">
       <SubType>compile</SubType>
     </Compile>
     <Compile Include="buttons.c">
@@ -179,6 +194,9 @@
     <Compile Include="counter.h">
       <SubType>compile</SubType>
     </Compile>
+    <Compile Include="delay.h">
+      <SubType>compile</SubType>
+    </Compile>
     <Compile Include="Device_Startup\startup_samd21.c">
       <SubType>compile</SubType>
     </Compile>
@@ -189,6 +207,12 @@
       <SubType>compile</SubType>
     </Compile>
     <Compile Include="event.h">
+      <SubType>compile</SubType>
+    </Compile>
+    <Compile Include="i2c.c">
+      <SubType>compile</SubType>
+    </Compile>
+    <Compile Include="i2c.h">
       <SubType>compile</SubType>
     </Compile>
     <Compile Include="led.c">
