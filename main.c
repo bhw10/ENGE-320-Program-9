@@ -1,31 +1,32 @@
 // *****************************************************************
 // *
 // * Name Britton Williams;
-// * Program : Program 8;
+// * Program : Program 9;
 // * Class : ENGE 320
-// * Date : 11/ 4/25;
+// * Date : 11/11/25;
 // * Description : Buttons control modes. Mode 0 causes all LEDs to fade between colors concurrently. Mode 1 causes LEDs to fade individually in a figure-8 pattern.
-// * Joystick controls speed of fade.
+// * Mode 2 causes LEDs to follow joystick. Mode 3 causes LEDs to follow tilt of board.
 // *
 // * =============================================================
 // * Program Grading Criteria
 // * =============================================================
 // * REQUIRED (40)
-// * Pressing S0 selects mode 0: yes
-// * Mode 0 LED’s fade in correct sequence: yes
-// * Pressing S1 selects mode 1: yes
-// * Mode 1 LED’s fade in correct sequence: yes
-// * OPTIONAL (80)
-// * Without joystick, Mode 0 LED’s fade a full cycle in 1 second: (10) 10
-// * When joystick up, Mode 0 LED’s fade a full cycle in 1/6 of a second: (10) 10
-// * When joystick down, Mode 0 LED’s fade a full cycle in 6 seconds: (10) 10
-// * Mode 0 Joystick up/down varies timing proportionally: (10) 0
-// * Without joystick, Mode 1 LED’s fade a full cycle in 1 second: (10) 10
-// * When joystick up, Mode 1 LED’s fade a full cycle in 1/6 of a second: (10) 10
-// * When joystick down, Mode 1 LED’s fade a full cycle in 6 seconds: (10) 10
-// * Mode 1 joystick up/down varies timing proportionally: (10) 0
+// * Pressing S2 selects mode 2: yes
+// * Mode 2 LED’s change color in correct sequence: yes
+// * Pressing S3 selects mode 3: yes
+// * Mode 3 LED’s change color in correct sequence: yes
+// * The accelerometer unit is interrupt driven: yes
+// * 
+// * OPTIONAL (60)
+// * In X direction, led color follows joystick: (10) 10
+// * In Y direction, led color follows joystick: (10) 10
+// * LED’s flow fluidly with joystick: (10) 10
+// * In X direction, led color follows accelerometer: (10) 10
+// * In Y direction, led color follows accelerometer: (10) 10
+// * LED’s flow fluidly with accelerometer: (10) 10
+// *
 
-// * Total (120) 100
+// * Total (100) 100
 // * =============================================================
 //*****************************************************************
 
@@ -196,7 +197,6 @@ const uint16_t xy_fade_down[410] = {4095, 4065, 4035, 4006, 3976, 3947, 3917, 38
 //------------------------------------------------------------------------------
 
 static uint8_t calculate_adc();
-static void mode_select();
 
 //------------------------------------------------------------------------------
 //      __        __          __
@@ -359,7 +359,7 @@ int main(void)
 				{
 					old_millis = millis;
 					adc_interruptSet();
-					mode = 2;
+					mode = 2; // go to mode 2
 					led_writeAll(0, 0, 0);
 					spi_write();
 					counter_flagSet(0);
@@ -368,7 +368,7 @@ int main(void)
 				{
 					old_millis = millis;
 					adc_reset();
-					mode = 3;
+					mode = 3; // go to mode 3
 					led_writeAll(0,0,0);
 					spi_write();
 					counter_flagSet(0);
@@ -541,7 +541,7 @@ int main(void)
 				{
 					old_millis = millis;
 					adc_reset();
-					mode = 3;
+					mode = 3; // go to mode 3
 					led_writeAll(0,0,0);
 					spi_write();
 					counter_flagSet(0);
@@ -707,7 +707,7 @@ int main(void)
 				{
 					old_millis = millis;
 					adc_interruptSet();
-					mode = 2;
+					mode = 2; // go to mode 2
 					led_writeAll(0, 0, 0);
 					spi_write();
 					counter_flagSet(0);
@@ -718,7 +718,7 @@ int main(void)
 				counter_flagSet(0); // clear flag
 				led_writeAll(0, 0, 0); // turn off all LEDs
 				
-				if ((millis - accel_millis) > 2)
+				if ((millis - accel_millis) > 1)
 				{
 					accelerometer_get();
 					// normalize accel values to be within -2048 and 2048
@@ -815,13 +815,13 @@ int main(void)
 				}
 				else if (high_val <= 1640) // red to blue
 				{
-					middle_red = xy_fade_up[1640 - high_val];
-					middle_blue = xy_fade_down[1640 - high_val];
+					middle_red = xy_fade_up[1640 - high_val]; // fade red up
+					middle_blue = xy_fade_down[1640 - high_val]; // fade blue down
 					middle_green = 0;
 				}
 				else // blue to off
 				{
-					middle_blue = xy_fade_up[2047 - high_val];
+					middle_blue = xy_fade_up[2047 - high_val]; // fade blue up
 					middle_red = 0;
 					middle_green = 0;
 				}
@@ -879,41 +879,6 @@ static uint8_t calculate_adc()
 	return step;
 }
 
-
-static void mode_select()
-{
-	if (buttons_get(0)) // if button 0 pressed
-	{
-		adc_reset();
-		mode = 0; // go to mode 0
-		color = RED;
-		led_writeAll(0, 0, 0); // turn off LEDs
-		spi_write();
-		index_ = 0;
-	}
-	if (buttons_get(1)) // if button 1 pressed
-	{
-		adc_reset();
-		mode = 1; // go to mode 1
-		led_writeAll(0, 0, 0); // turn off LEDs
-		spi_write();
-		counter_flagSet(0); // make sure flag is cleared before next spi write
-		// Initialize state variables
-		index_ = 0;
-		state = 0;
-		led = 1;
-		next_led = 2;
-		led_state = 0;
-	}
-	if (buttons_get(2))
-	{
-		adc_interruptSet();
-		mode = 2;
-		led_writeAll(0, 0, 0);
-		spi_write();
-		counter_flagSet(0);
-		}
-}
 //-----------------------------------------------------------------------------
 //        __   __   __
 //     | /__` |__) /__`

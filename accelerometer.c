@@ -74,7 +74,7 @@ void accelerometer_init()
     retval = bmi160_init(&sensor);
     if (retval != BMI160_OK) {
         // Initialization failed
-        accelerometer_init(); // Stop here in debug
+		accelerometer_init();
     }
     
     /* Select the Output data rate, range of accelerometer sensor */
@@ -88,7 +88,7 @@ void accelerometer_init()
     rslt = bmi160_set_sens_conf(&sensor);
     if (rslt != BMI160_OK) {
         // Configuration failed
-        while(1); // Stop here in debug
+        accelerometer_init(); // Stop here in debug
     }
 
     // Wait for power-up and configuration to take effect
@@ -129,8 +129,6 @@ uint8_t accelerometer_get()
     return 1;
 }
 
-// Yes this could be a unified function, but as mentioned in the I2C driver, I'm lazy...
-// I'll fix it for the program - maybe...
 int16_t accelerometer_get_x()
 {
 	return msblsb_x;
