@@ -44,7 +44,7 @@
 #include "led.h"
 #include "buttons.h"
 #include "adc.h"
-#include <stdlib.h>
+#include <math.h>
 
 //------------------------------------------------------------------------------
 //      __   ___  ___         ___  __
@@ -233,9 +233,9 @@ int main(void)
 		{
 			if ((millis - old_millis) > 20) // button debounce
 			{
-				old_millis = millis;
 				if (buttons_get(1)) // if button 1 pressed
 				{
+					old_millis = millis;
 					adc_reset();
 					mode = 1; // go to mode 1
 					led_writeAll(0, 0, 0); // turn off LEDs
@@ -250,6 +250,7 @@ int main(void)
 				}
 				if (buttons_get(2))
 				{
+					old_millis = millis;
 					adc_interruptSet();
 					mode = 2;
 					led_writeAll(0, 0, 0);
@@ -324,9 +325,9 @@ int main(void)
 		{
 			if ((millis - old_millis) > 20)
 			{
-				old_millis = millis;
 				if (buttons_get(0)) // if button 0 pressed
 				{
+					old_millis = millis;
 					adc_reset();
 					mode = 0; // go to mode 0
 					color = RED;
@@ -336,6 +337,7 @@ int main(void)
 				}
 				if (buttons_get(2))
 				{
+					old_millis = millis;
 					adc_interruptSet();
 					mode = 2;
 					led_writeAll(0, 0, 0);
@@ -479,9 +481,9 @@ int main(void)
 		{
 			if ((millis - old_millis) > 20) // button debounce
 			{
-				old_millis = millis;
 				if (buttons_get(0)) // if button 0 pressed
 				{
+					old_millis = millis;
 					adc_reset();
 					mode = 0; // go to mode 0
 					color = RED;
@@ -491,6 +493,7 @@ int main(void)
 				}
 				if (buttons_get(1)) // if button 1 pressed
 				{
+					old_millis = millis;
 					adc_reset();
 					mode = 1; // go to mode 1
 					led_writeAll(0, 0, 0); // turn off LEDs
@@ -509,58 +512,105 @@ int main(void)
 				counter_flagSet(0); // clear flag
 				led_writeAll(0, 0, 0); // turn off all LEDs
 				
-				// Set LED values
-				if (abs(adc_get_X()) < 500)
+				// Configure left and right LEDs 
+				if (abs(adc_get_X()) < 410) // off to blue
 				{
 					x_blue = xy_fade_up[abs(adc_get_X())]; // fade blue up
+					x_red = 0;
+					x_green = 0;
 				}
-				else if (abs(adc_get_X()) < 820)
+				else if (abs(adc_get_X()) < 820) // blue to red
 				{
-					x_red = xy_fade_up[abs(adc_get_X())]; // fade red up
-					x_blue = xy_fade_down[abs(adc_get_X())]; // fade blue down
+					x_red = xy_fade_up[abs(adc_get_X()) - 410]; // fade red up
+					x_blue = xy_fade_down[abs(adc_get_X()) - 410]; // fade blue down
+					x_green = 0;
 				}
-				else if (abs(adc_get_X()) < 1230)
+				else if (abs(adc_get_X()) < 1230) // red to green
 				{
-					x_green = xy_fade_up[abs(adc_get_X())]; // fade green up
-					x_red = xy_fade_down[abs(adc_get_X())]; // fade red down
+					x_green = xy_fade_up[abs(adc_get_X()) - 820]; // fade green up
+					x_red = xy_fade_down[abs(adc_get_X()) - 820]; // fade red down
+					x_blue = 0;
 				}
-				else if (abs(adc_get_X()) < 1640)
+				else if (abs(adc_get_X()) < 1640) // green to cyan
 				{
-					x_green = xy_fade_up[abs(adc_get_X())]; // fade green up
-					x_blue = xy_fade_up[abs(adc_get_X())]; // fade blue up
+					x_green = xy_fade_up[abs(adc_get_X()) - 1230]; // fade green up
+					x_blue = xy_fade_up[abs(adc_get_X()) - 1230]; // fade blue up
+					x_red = 0;
 				}
-				else
+				else // cyan to white
 				{
 					x_green = 4095; // max green
 					x_blue = 4095; // max blue
-					x_red = xy_fade_up[abs(adc_get_X())]; // fade red up
+					x_red = xy_fade_up[abs(adc_get_X()) - 1640]; // fade red up
 				}
-				if (abs(adc_get_Y()) < 500)
+				
+				// Configure top and bottom LEDs
+				if (abs(adc_get_Y()) < 410) // off to blue
 				{
 					y_blue = xy_fade_up[abs(adc_get_Y())]; // fade blue up
+					y_green = 0;
+					y_red = 0;
 				}
-				else if (abs(adc_get_Y()) < 820)
+				else if (abs(adc_get_Y()) < 820) // blue to red
 				{
-					y_red = xy_fade_up[abs(adc_get_Y())]; // fade red up
-					y_blue = xy_fade_down[abs(adc_get_Y())]; // fade blue down
+					y_red = xy_fade_up[abs(adc_get_Y()) - 410]; // fade red up
+					y_blue = xy_fade_down[abs(adc_get_Y()) - 410]; // fade blue down
+					y_green = 0;
 				}
-				else if (abs(adc_get_Y()) < 1230)
+				else if (abs(adc_get_Y()) < 1230) // red to green
 				{
-					y_green = xy_fade_up[abs(adc_get_Y())]; // fade green up
-					y_red = xy_fade_down[abs(adc_get_Y())]; // fade red down
+					y_green = xy_fade_up[abs(adc_get_Y()) - 820]; // fade green up
+					y_red = xy_fade_down[abs(adc_get_Y()) - 820]; // fade red down
+					y_blue = 0;
 				}
-				else if (abs(adc_get_Y()) < 1640)
+				else if (abs(adc_get_Y()) < 1640) // green to cyan
 				{
-					y_green = xy_fade_up[abs(adc_get_Y())]; // fade green up
-					y_blue = xy_fade_up[abs(adc_get_Y())]; // fade blue up
+					y_green = xy_fade_up[abs(adc_get_Y()) - 1230]; // fade green up
+					y_blue = xy_fade_up[abs(adc_get_Y()) - 1230]; // fade blue up
+					y_red = 0;
 				}
-				else
+				else // cyan to white
 				{
 					y_green = 4095; // max green
 					y_blue = 4095; // max blue
-					y_red = xy_fade_up[abs(adc_get_Y())]; // fade red up
+					y_red = xy_fade_up[abs(adc_get_Y()) - 1640]; // fade red up
 				}
 				
+				// Configure middle LED
+				// if X > Y
+				// high_val = X
+				// else high_val = Y
+				uint16_t high_val = (abs(adc_get_X()) > abs(adc_get_Y()))? abs(adc_get_X()) : abs(adc_get_Y()); // get higher value between x and y
+				if (high_val <= 410) // white to cyan
+				{
+					middle_green = 4095; // max green
+					middle_blue = 4095; // max blue
+					middle_red = xy_fade_up[410 - high_val]; // fade red up
+				}
+				else if (high_val <= 820) // cyan to green
+				{
+					middle_green = xy_fade_up[820 - high_val]; // fade green up
+					middle_blue = xy_fade_up[820 - high_val]; // fade blue up
+					middle_red = 0;
+				}
+				else if (high_val <= 1230) // green to red
+				{
+					middle_green = xy_fade_up[1230 - high_val]; // fade green up
+					middle_red = xy_fade_down[1230 - high_val]; // fade red down
+					middle_blue = 0;
+				}
+				else if (high_val <= 1640) // red to blue
+				{
+					middle_red = xy_fade_up[1640 - high_val];
+					middle_blue = xy_fade_down[1640 - high_val];
+					middle_green = 0;
+				}
+				else // blue to off
+				{
+					middle_blue = xy_fade_up[2047 - high_val];
+					middle_red = 0;
+					middle_green = 0;
+				}
 				// Write to correct LEDs
 				if (adc_get_X() < 0)
 				{
@@ -578,6 +628,7 @@ int main(void)
 				{
 					led_write(3, y_red, y_green, y_blue);
 				}
+				led_write(5, middle_red, middle_green, middle_blue);
 				spi_write();
 			}
 		}

@@ -117,6 +117,7 @@ int16_t adc_get_Y()
 	// Atomic block
 	__disable_irq();
 	result = 2048 - y_val;
+	
 	__enable_irq();
 	return result;
 }
